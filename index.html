@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Makes the page fit the phone screen, including the area around the iPhone notch -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Tells iPhone to use the dark colour behind the status bar and when "added to Home Screen" -->
+  <meta name="theme-color" content="#0E0E12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="What to wear">
+  <title>What to wear</title>
+
+  <!-- Load the Carlito font from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background-color: #0E0E12;
+    }
+
+    body {
+      /* Fill the whole screen; 100dvh accounts for Safari's moving address bar */
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Keep text clear of the notch and home bar */
+      padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right))
+               env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
+      font-family: "Carlito", Calibri, sans-serif;
+      color: #7C3AED;
+      text-align: center;
+      /* Stop iPhone enlarging text when the phone is turned sideways */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    h1 {
+      font-weight: 700;
+      /* Scales with screen width, but never smaller than 2rem or bigger than 4rem */
+      font-size: clamp(2rem, 9vw, 4rem);
+      line-height: 1.2;
+      /* When the text wraps, split it into lines of similar length */
+      text-wrap: balance;
+    }
+  </style>
+</head>
+<body>
+  <h1>What to wear: coming soon</h1>
+</body>
+</html>
