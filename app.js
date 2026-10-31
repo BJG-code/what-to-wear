@@ -18,8 +18,14 @@
 
   const el = (id) => document.getElementById(id);
   const WARMTH = ['hot', 'neutral', 'cold'];
+  // Minutes per km, used to pre-fill the duration: running about 6 min/km, cycling about 25 km/h
+  const PACE = { running: 6, cycling: 60 / 25 };
+  const DAYS_AHEAD = 5;
+  // True once you've typed your own duration, so changing the distance doesn't overwrite it
+  let durationTyped = false;
   // Your profile is null until you've filled in Getting to know you
-  const state = { activity: 'running', profile: null, location: null, weather: null };
+  // session holds the day, start time, distance, duration and effort once "What should I wear?" is tapped
+  const state = { activity: 'running', profile: null, location: null, weather: null, session: null };
   // A runs hot / cold choice saved by the old version of the app, used to pre-tick the new one
   let oldWarmth = null;
 
@@ -67,11 +73,132 @@
     window.scrollTo(0, 0);
   }
 
-  // The line at the top of Your outfit, e.g. "Sat 31 Oct · 07:00 · Run"
-  function summaryText(when, activity) {
-    const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-    const time = when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    return [day.replace(',', ''), time, activity === 'cycling' ? 'Ride' : 'Run'].join(' · ');
+  // The line at the top of Your outfit, e.g. "Wed 28 Oct · 07:00 · Easy 8 km run"
+  function summaryText(session) {
+    const day = session.start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const effort = session.effort[0].toUpperCase() + session.effort.slice(1);
+    const kind = session.activity === 'cycling' ? 'ride' : 'run';
+    return [day.replace(',', ''), session.time, `${effort} ${session.distance} km ${kind}`].join(' · ');
+  }
+
+  // A day as "2026-10-28", in the phone's own time zone
+  function dayValue(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  // Day picker: today and the next 5 days, nothing later. Keeps your choice if it's still there.
+  function showDays() {
+    const chosen = checkedValue('day');
+    const today = new Date();
+    if (el('days').dataset.today === dayValue(today)) return;
+    el('days').dataset.today = dayValue(today);
+    const labels = [];
+    for (let i = 0; i <= DAYS_AHEAD; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'day';
+      input.value = dayValue(date);
+      input.checked = input.value === chosen;
+      const full = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+      input.setAttribute('aria-label', i === 0 ? `Today, ${full}` : full);
+      const span = document.createElement('span');
+      const weekday = document.createElement('small');
+      weekday.textContent = date.toLocaleDateString('en-GB', { weekday: 'short' });
+      const number = document.createElement('strong');
+      number.textContent = date.getDate();
+      span.append(weekday, number);
+      label.append(input, span);
+      labels.push(label);
+    }
+    el('days').replaceChildren(...labels);
+  }
+
+  function checkedValue(name) {
+    const input = document.querySelector(`input[name="${name}"]:checked`);
+    return input ? input.value : null;
+  }
+
+  // A number above 0 and no bigger than max, or null if the box is empty or doesn't make sense
+  function readNumber(input, max) {
+    const n = parseFloat(input.value);
+    return Number.isFinite(n) && n > 0 && n <= max ? n : null;
+  }
+
+  // Duration starts as distance × pace, until you type your own
+  function fillDuration() {
+    if (durationTyped) return;
+    const km = readNumber(el('distance'), 500);
+    el('duration').value = km ? Math.max(1, Math.round(km * PACE[state.activity])) : '';
+  }
+
+  // The − and + buttons beside the distance, 1 km at a time and never below 1 km
+  function stepDistance(change) {
+    const km = readNumber(el('distance'), 500) || 0;
+    el('distance').value = Math.min(500, Math.max(1, Math.round((km + change) * 10) / 10));
+    el('distance').dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Each session input: how to read it, its error message, and where to go to fix it
+  const FIELDS = [
+    { name: 'day', error: 'day-error', read: () => checkedValue('day'),
+      focus: () => document.querySelector('input[name="day"]') },
+    { name: 'start time', error: 'time-error', read: () => el('start-time').value || null,
+      input: 'start-time' },
+    { name: 'distance', error: 'distance-error', read: () => readNumber(el('distance'), 500),
+      input: 'distance' },
+    { name: 'duration', error: 'duration-error', read: () => readNumber(el('duration'), 1440),
+      input: 'duration' },
+    { name: 'effort', error: 'effort-error', read: () => checkedValue('effort'),
+      focus: () => document.querySelector('input[name="effort"]') },
+  ];
+
+  function showFieldError(field, show) {
+    el(field.error).hidden = !show;
+    if (field.input) {
+      if (show) el(field.input).setAttribute('aria-invalid', 'true');
+      else el(field.input).removeAttribute('aria-invalid');
+    }
+  }
+
+  // Once you fix an input that was flagged, its message goes away
+  function clearFixedErrors() {
+    for (const field of FIELDS) {
+      if (!el(field.error).hidden && field.read() !== null) showFieldError(field, false);
+    }
+    if (FIELDS.every((field) => el(field.error).hidden)) el('session-error').hidden = true;
+  }
+
+  // "a, b and c"
+  function listWords(words) {
+    return words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`;
+  }
+
+  // Reads every session input. Returns null, and says what's missing, if any aren't filled in.
+  function readSession() {
+    const missing = FIELDS.filter((field) => field.read() === null);
+    for (const field of FIELDS) showFieldError(field, missing.includes(field));
+    if (missing.length) {
+      el('session-error').textContent = `Please add the ${listWords(missing.map((f) => f.name))} first.`;
+      el('session-error').hidden = false;
+      const first = missing[0];
+      (first.input ? el(first.input) : first.focus()).focus();
+      return null;
+    }
+    el('session-error').hidden = true;
+    const [y, m, d] = checkedValue('day').split('-').map(Number);
+    const time = el('start-time').value.slice(0, 5);
+    const [hours, minutes] = time.split(':').map(Number);
+    return {
+      activity: state.activity,
+      start: new Date(y, m - 1, d, hours, minutes),
+      time,
+      distance: Math.round(readNumber(el('distance'), 500) * 10) / 10,
+      duration: Math.round(readNumber(el('duration'), 1440)),
+      effort: checkedValue('effort'),
+    };
   }
 
   // "Hello Bradley!" at the top of Plan a session
@@ -97,7 +224,11 @@
   }
 
   function openOutfit() {
-    el('summary').textContent = summaryText(new Date(), state.activity);
+    showDays();
+    const session = readSession();
+    if (!session) return;
+    state.session = session;
+    el('summary').textContent = summaryText(session);
     // Adds a step to the browser history, so swiping back returns to Plan a session
     history.pushState({ screen: 'outfit' }, '');
     showScreen('outfit');
@@ -250,6 +381,7 @@
       input.addEventListener('change', () => {
         state.activity = input.value;
         save();
+        fillDuration();
         render();
       });
     }
@@ -276,6 +408,22 @@
       }
     });
     showGreeting();
+
+    // Plan a session inputs
+    showDays();
+    // If the app is left open past midnight, move the days along when you come back to it
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) showDays();
+    });
+    el('distance').addEventListener('input', fillDuration);
+    el('distance-down').addEventListener('click', () => stepDistance(-1));
+    el('distance-up').addEventListener('click', () => stepDistance(1));
+    el('duration').addEventListener('input', () => {
+      // Emptying the box hands the duration back to the distance next time it changes
+      durationTyped = el('duration').value !== '';
+    });
+    el('plan-screen').addEventListener('input', clearFixedErrors);
+    el('plan-screen').addEventListener('change', clearFixedErrors);
 
     el('what-to-wear').addEventListener('click', openOutfit);
     // The back arrow does the same as the browser's back, so both end up in the same place

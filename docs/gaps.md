@@ -33,12 +33,12 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 ## Session inputs
 
-- [ ] 7. No day picker (today + 5 days). The app only shows the weather right now, so it can't plan a 07:00 ride tomorrow.
-- [ ] 8. No start-time picker.
-- [ ] 9. No distance input (− / km / +).
-- [ ] 10. No duration input.
-- [ ] 11. No effort choice (Easy / Medium / Hard with heart-rate ranges).
-- [ ] 12. No "What should I wear?" button, and no check that every input is filled in.
+- [x] 7. No day picker (today + 5 days). The app only shows the weather right now, so it can't plan a 07:00 ride tomorrow.
+- [x] 8. No start-time picker.
+- [x] 9. No distance input (− / km / +).
+- [x] 10. No duration input.
+- [x] 11. No effort choice (Easy / Medium / Hard with heart-rate ranges).
+- [x] 12. No "What should I wear?" button, and no check that every input is filled in.
 
 ## Profile
 

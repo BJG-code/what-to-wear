@@ -369,6 +369,187 @@
       outline-offset: -2px;
     }
 
+    /* Plan a session: day, start time, distance, duration and effort */
+    .days {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .days label,
+    .efforts label {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .days input,
+    .efforts input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .days span {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 64px;
+      border-radius: 12px;
+      background: var(--surface);
+      line-height: 1.2;
+    }
+
+    .days small {
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .days strong {
+      font-size: 1.25rem;
+    }
+
+    .days input:checked + span {
+      background: var(--purple);
+      color: #fff;
+    }
+
+    .days input:checked + span small {
+      color: #fff;
+    }
+
+    .days label:hover input:not(:checked) + span,
+    .efforts label:hover input:not(:checked) + span {
+      background: var(--selected-tint);
+    }
+
+    .days input:focus-visible + span,
+    .efforts input:focus-visible + span,
+    .step-button:focus-visible {
+      outline: 2px solid var(--purple-light);
+      outline-offset: 2px;
+    }
+
+    /* Start time and distance side by side */
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .pair > div {
+      min-width: 0;
+    }
+
+    input[type="time"].text-input {
+      -webkit-appearance: none;
+      appearance: none;
+      text-align: left;
+    }
+
+    /* A number box with its unit after it, e.g. "8 km" or "48 min" */
+    .unit-input {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 10px;
+    }
+
+    .unit-input:focus-within {
+      outline: 2px solid var(--purple-light);
+      outline-offset: 1px;
+    }
+
+    .unit-input input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      background: none;
+      border: none;
+      outline: none;
+      text-align: right;
+      -moz-appearance: textfield;
+    }
+
+    .unit-input input::-webkit-outer-spin-button,
+    .unit-input input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .unit-input span {
+      flex: 1;
+      color: var(--muted);
+    }
+
+    .duration .unit-input {
+      width: calc(50% - 6px);
+    }
+
+    /* Distance: − box + */
+    .stepper {
+      display: flex;
+      gap: 6px;
+    }
+
+    .stepper .unit-input {
+      flex: 1;
+      min-width: 0;
+      padding: 0 6px;
+    }
+
+    .step-button {
+      flex: 0 0 44px;
+      min-height: 48px;
+      border: none;
+      border-radius: 10px;
+      background: var(--surface);
+      font-size: 1.375rem;
+      cursor: pointer;
+    }
+
+    .step-button:hover {
+      background: var(--selected-tint);
+    }
+
+    /* Effort: three cards with the heart-rate range under each */
+    .efforts {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .efforts span {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 72px;
+      padding: 10px 12px;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      background: var(--surface);
+      line-height: 1.25;
+    }
+
+    .efforts small {
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .efforts input:checked + span {
+      background: var(--selected-tint);
+      border-color: var(--purple-light);
+    }
+
+    #session-error {
+      text-align: center;
+      margin-top: -12px;
+    }
+
     /* Weather and what to wear */
     #temperature {
       font-size: 3rem;
@@ -483,6 +664,55 @@
         </div>
       </fieldset>
 
+      <fieldset>
+        <legend class="label">Day · up to 5 days ahead</legend>
+        <!-- Today and the next 5 days, filled in by app.js -->
+        <div class="days" id="days"></div>
+        <p id="day-error" class="error" hidden>Choose a day.</p>
+      </fieldset>
+
+      <div class="pair">
+        <div>
+          <label class="label" for="start-time">Start time</label>
+          <input id="start-time" class="text-input" type="time" aria-describedby="time-error">
+          <p id="time-error" class="error" hidden>Choose a start time.</p>
+        </div>
+        <div>
+          <label class="label" for="distance">Distance</label>
+          <div class="stepper">
+            <button type="button" class="step-button" id="distance-down" aria-label="1 km less">−</button>
+            <div class="unit-input">
+              <input id="distance" type="number" inputmode="decimal" min="0.1" max="500" step="any"
+                     enterkeyhint="done" aria-describedby="distance-error">
+              <span aria-hidden="true">km</span>
+            </div>
+            <button type="button" class="step-button" id="distance-up" aria-label="1 km more">+</button>
+          </div>
+          <p id="distance-error" class="error" hidden>Enter a distance in km.</p>
+        </div>
+      </div>
+
+      <div class="duration">
+        <label class="label" for="duration">Duration</label>
+        <div class="unit-input">
+          <input id="duration" type="number" inputmode="numeric" min="1" max="1440" step="1"
+                 enterkeyhint="done" aria-describedby="duration-hint duration-error">
+          <span aria-hidden="true">min</span>
+        </div>
+        <p id="duration-hint" class="hint">Worked out from the distance. Change it if you like.</p>
+        <p id="duration-error" class="error" hidden>Enter how long it will take, in minutes.</p>
+      </div>
+
+      <fieldset>
+        <legend class="label">Effort · average heart rate</legend>
+        <div class="efforts">
+          <label><input type="radio" name="effort" value="easy"><span><strong>Easy</strong><small>110–140 bpm</small></span></label>
+          <label><input type="radio" name="effort" value="medium"><span><strong>Medium</strong><small>140–170 bpm</small></span></label>
+          <label><input type="radio" name="effort" value="hard"><span><strong>Hard</strong><small>170+ bpm</small></span></label>
+        </div>
+        <p id="effort-error" class="error" hidden>Choose an effort.</p>
+      </fieldset>
+
       <section aria-label="Location">
         <span class="label">Weather for</span>
         <div class="location-row">
@@ -502,6 +732,7 @@
       <p id="status" role="status" hidden></p>
 
       <button type="button" class="primary-button" id="what-to-wear">What should I wear?</button>
+      <p id="session-error" class="error" role="alert" hidden></p>
     </div>
 
     <!-- Screen 2: Your outfit -->
