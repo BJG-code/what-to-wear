@@ -420,6 +420,26 @@ test.describe('with location allowed', () => {
     await expect(page.getByRole('radio', { name: 'Runs hot' })).toBeChecked();
   });
 
+  test('place search buttons and boxes are big enough to tap', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Change', exact: true }).click();
+    await page.getByRole('searchbox', { name: 'Town or city' }).fill('Malaga');
+    await page.getByRole('button', { name: 'Search' }).click();
+    await expect(page.getByRole('button', { name: 'Málaga, Andalusia, Spain' })).toBeVisible();
+    for (const target of [
+      page.getByRole('button', { name: 'Change', exact: true }),
+      page.getByRole('searchbox', { name: 'Town or city' }),
+      page.getByRole('button', { name: 'Search' }),
+      page.getByRole('button', { name: 'Málaga, Andalusia, Spain' }),
+      page.getByRole('button', { name: 'Use my current location' }),
+    ]) {
+      const box = await target.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+    }
+  });
+
   test('can change to another place, and go back to your location', async ({ page }) => {
     const requests = await mockServices(page);
     await page.goto('/');
@@ -505,6 +525,19 @@ test.describe('with location allowed', () => {
     await page.evaluate(() => document.fonts.ready);
     const loaded = await page.evaluate(() => document.fonts.check('700 16px Carlito'));
     expect(loaded).toBe(true);
+  });
+
+  test('has its own home-screen icon, 180 by 180', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const href = await page.locator('link[rel="apple-touch-icon"]').getAttribute('href');
+    const size = await page.evaluate(async (src) => {
+      const image = new Image();
+      image.src = src;
+      await image.decode();
+      return [image.naturalWidth, image.naturalHeight];
+    }, href);
+    expect(size).toEqual([180, 180]);
   });
 
   test('page does not scroll sideways', async ({ page }) => {
@@ -714,6 +747,15 @@ test.describe('with location allowed', () => {
       expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.width).toBeGreaterThanOrEqual(44);
     }
+    // The number boxes fill their boxes, and tapping "km" or "min" still puts the cursor in them
+    for (const name of ['Distance', 'Duration']) {
+      const box = await page.getByRole('spinbutton', { name }).boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    await page.locator('.stepper .unit-input span').click();
+    await expect(page.getByRole('spinbutton', { name: 'Distance' })).toBeFocused();
+    await page.locator('.duration .unit-input span').click();
+    await expect(page.getByRole('spinbutton', { name: 'Duration' })).toBeFocused();
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('123.5');
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
