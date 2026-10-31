@@ -11,6 +11,7 @@
 - Wind is shown in km/h, not mph. The 25 mph gust threshold becomes 40 km/h.
 - Sun cream and sunglasses added to the Accessories card.
 - Feedback is three buttons: Too hot / Perfect / Too cold. "Way off" is removed.
+- You can search for a town instead of using your location, e.g. to plan a session somewhere you aren't yet. The town you pick is remembered until you switch back to "Use my current location" (agreed later on 31 Oct 2026).
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -32,7 +33,7 @@ v1.0 covers one person, two activities and manual inputs; anything needing accou
 | --- | --- |
 | Running and cycling | Other activities (walking, hiking) |
 | "Getting to know you" profile, saved on the phone | Login, accounts, syncing between devices |
-| Location from the phone's GPS | Saved locations, route-based forecasts |
+| Location from the phone's GPS, or a town you search for | A list of saved locations, route-based forecasts |
 | Forecast from Open-Meteo, up to 5 days ahead | Met Office or Apple WeatherKit as a second source |
 | Effort chosen manually: Hard / Medium / Easy | Heart rate and workouts from Apple Health, Strava or Garmin |
 | Outfit from fixed rules, with short notes when they apply | AI-written summary from Claude (costs per use) |
@@ -94,7 +95,7 @@ One free call to Open-Meteo's hourly forecast for the phone's GPS position retur
 - The app reads the hour nearest your chosen start time for the dressing temperature and the readings.
 - It also reads every hour up to the end of the session (start + duration). Rain and gust notes, and the cycling waterproof, use the worst hour in that window.
 - Wind is requested in km/h (`wind_speed_unit=kmh`).
-- If GPS is refused or unavailable, it falls back to central London and says so.
+- If GPS is refused or unavailable, it falls back to central London and says so. You can still search for a town instead.
 - If the forecast can't load, it says so plainly and shows no outfit, rather than guessing.
 
 Open-Meteo is free for non-commercial use; confirm field names against its docs at build time.
