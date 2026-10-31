@@ -1,6 +1,16 @@
 # What to wear — v1.0 product spec
 
-27 Oct 2026 · Bradley Gladden
+27 Oct 2026 · Bradley Gladden · updated 31 Oct 2026
+
+**Changes since 27 Oct 2026** (agreed 31 Oct 2026)
+
+- Day, start time, distance, effort and the new duration are all required before an outfit is shown. The outfit is always for the chosen day and time, never "right now".
+- New **Duration** input after Distance, used to warn about weather changes during the session.
+- Plan a session greets you by name: "Hello Bradley".
+- Wind is shown in km/h, not mph. The 25 mph gust threshold becomes 40 km/h.
+- Sun cream and sunglasses added to the Accessories card.
+- Feedback is three buttons: Too hot / Perfect / Too cold. "Way off" is removed.
+- Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
 
@@ -32,29 +42,29 @@ v1.0 covers one person, two activities and manual inputs; anything needing accou
 
 Four quick inputs lead to the outfit; the rating after each session moves the learned offset that every later recommendation uses.
 
-Flow: Profile (first launch only) → Activity (running or cycling) → Day and time (up to 5 days ahead) → Distance and effort → Forecast (GPS + Open-Meteo) → Outfit (from the dressing temperature) → Rate it after the session → Learned offset updated → used in every future recommendation.
+Flow: Profile (first launch only) → Activity (running or cycling) → Day and time (up to 5 days ahead) → Distance, duration and effort → Forecast (GPS + Open-Meteo) → Outfit (from the dressing temperature) → Rate it after the session → Learned offset updated → used in every future recommendation.
 
 Screens in v1.0 (mockups in docs/mockups/):
 
 | Screen | Mockup | Contents |
 | --- | --- | --- |
 | Getting to know you (first launch) | main.png | Logo + tagline, name, runs hot / neutral / runs cold, units, "Let's go" |
-| Plan a session | plan.png | Logo + tagline and settings cog, activity, day (today + 5), start time, distance, effort, "What should I wear?" |
-| Your outfit | outfit.png | Dressing temperature and its breakdown, six weather readings, three outfit cards, notes that apply, four feedback buttons |
+| Plan a session | plan.png | Logo + tagline and settings cog, "Hello Bradley" greeting, activity, day (today + 5), start time, distance, duration, effort, "What should I wear?" |
+| Your outfit | outfit.png | Dressing temperature and its breakdown, six weather readings, three outfit cards, notes that apply, three feedback buttons |
 | Settings | settings.png | Profile, learned offsets with Reset, rules of thumb (running / cycling tabs) |
 
 ## Inputs
 
-The profile is set once on first launch and editable in Settings; the session inputs are asked every time and take under 30 seconds.
+The profile is set once on first launch and editable in Settings; the session inputs are asked every time, are all required, and take under 30 seconds.
 
 **Profile ("Getting to know you")**
 
 | Field | Options | Used for |
 | --- | --- | --- |
-| Name | Free text | Greeting |
+| Name | Free text | Greeting: "Hello Bradley" at the top of Plan a session |
 | Do you run hot or cold? | Runs hot / Neutral / Runs cold | Shifts every recommendation warmer or cooler |
 | Your rules of thumb | Edit the starting thresholds (see Outfit rules) | Your own starting logic |
-| Units | °C, mph, km (default) | Display only |
+| Units | °C, km/h, km (default) | Display only |
 
 **Each session**
 
@@ -62,8 +72,9 @@ The profile is set once on first launch and editable in Settings; the session in
 | --- | --- | --- |
 | Activity | Running / Cycling | Picks the clothing set and rules |
 | Day | Today up to 5 days ahead | Later days are greyed out |
-| Time | Hour picker | Forecast is read for that hour |
+| Time | Hour picker | Forecast is read for that hour (e.g. 07:00 tomorrow, not the weather now) |
 | Distance | km | Longer sessions dress lighter, as you warm up on the way (see Outfit rules) |
+| Duration | Minutes, pre-filled from distance (running about 6 min/km, cycling about 25 km/h), editable | Sets the weather window: every forecast hour from start to finish is checked for changes (see Output). Does not change the dressing temperature |
 | Effort | Hard (170+ bpm) / Medium (140–170) / Easy (110–140) | Harder effort means you dress lighter |
 
 ## Weather data
@@ -74,12 +85,14 @@ One free call to Open-Meteo's hourly forecast for the phone's GPS position retur
 | --- | --- | --- | --- |
 | Temperature | `temperature_2m` | °C | Shown |
 | Feels like | `apparent_temperature` | °C | **Main input:** already includes wind and humidity |
-| Gust / wind | `wind_speed_10m`, `wind_gusts_10m` | mph | Gilet trigger, gusty note |
+| Gust / wind | `wind_speed_10m`, `wind_gusts_10m` | km/h | Gilet trigger, gusty note |
 | Rain % | `precipitation_probability` | % | Note at 50% or more; cycling waterproof |
-| Sun | `cloud_cover`, `is_day` | Sunny / cloudy / dark | Shown; dark adds a lights note |
+| Sun | `cloud_cover`, `is_day` | Sunny (cloud 30% or less) / cloudy / dark | Shown; dark adds a lights note; sun cream and sunglasses |
 | Humidity | `relative_humidity_2m` | % | Shown |
 
-- The app reads the hour nearest your chosen time.
+- The app reads the hour nearest your chosen start time for the dressing temperature and the readings.
+- It also reads every hour up to the end of the session (start + duration). Rain and gust notes, and the cycling waterproof, use the worst hour in that window.
+- Wind is requested in km/h (`wind_speed_unit=kmh`).
 - If GPS is refused or unavailable, it falls back to central London and says so.
 - If the forecast can't load, it says so plainly and shows no outfit, rather than guessing.
 
@@ -111,12 +124,14 @@ So the app will sometimes deliberately recommend kit that feels chilly at the st
 | Item | Rule |
 | --- | --- |
 | Upper body | 16+ Vest · 11 to 15 T-shirt · 6 to 10 Long sleeve · 5 or below Long sleeve + Gilet |
-| Gilet (extra) | Also added when gusts are 25 mph or more and dressing temp is below 12 |
+| Gilet (extra) | Also added when gusts are 40 km/h or more and dressing temp is below 12 |
 | Lower body | 8+ Shorts · below 8 Tights |
 | Headband (warm ears) | 4 to 8 |
 | Hat | Below 4 (replaces headband) |
 | Gloves | Below 7 |
 | Rain | No kit change; the rain chance shows in the weather readings |
+| Sun cream | Temperature 16 °C or more, in daylight, and not overcast |
+| Sunglasses | Daylight and cloud cover 30% or less |
 
 **Cycling** (dressing temp, °C, after cycling chill)
 
@@ -127,6 +142,10 @@ So the app will sometimes deliberately recommend kit that feels chilly at the st
 | Lower body | 12+ Shorts · below 12 Tights |
 | Buff | Below 8 |
 | Gloves | Below 10 |
+| Sun cream | Temperature 16 °C or more, in daylight, and not overcast |
+| Sunglasses | Daylight and cloud cover 30% or less |
+
+Sun cream uses the actual temperature, not the dressing temperature. Both sun items go in the Accessories card.
 
 **Worked example:** easy 8 km run, feels like 6 °C, neutral profile, no learned offset → 6 + 0 + 2 + 0 + 0 = 8 °C → long sleeve, shorts, headband.
 
@@ -134,7 +153,9 @@ So the app will sometimes deliberately recommend kit that feels chilly at the st
 
 The result screen shows the dressing temperature and how it was worked out, the six weather readings, and three outfit cards (Upper body, Lower body, Accessories). There is no separate written summary, so each fact appears once.
 
-Short notes appear below the cards only when they apply: rain 50% or more ("rain likely"), gusts 25 mph or more ("gusty"), or dark at the chosen time ("take lights"). When distance or effort has made the outfit lighter, a note says so: "You'll start a little chilly, but you'll warm up as you go."
+Short notes appear below the cards only when they apply: rain 50% or more ("rain likely"), gusts 40 km/h or more ("gusty"), or dark at the chosen time ("take lights"). When distance or effort has made the outfit lighter, a note says so: "You'll start a little chilly, but you'll warm up as you go."
+
+Weather-change notes use the duration and appear only when something changes during the session, for example "Rain likely from 07:30", "About 4° colder by the end" (feels like changes by 3 °C or more), or "Dark from 17:10: take lights".
 
 ## Feedback loop
 
@@ -142,16 +163,15 @@ After each session you rate the outfit, and each rating nudges a learned offset 
 
 | Rating | What it means | Change to learned offset |
 | --- | --- | --- |
+| Too hot | Overdressed | +0.5 °C (future outfits lighter) |
 | Perfect | Outfit was right | No change |
-| Slightly warm | A bit overdressed | +0.5 °C (future outfits lighter) |
-| Slightly cold | A bit underdressed | −0.5 °C (future outfits warmer) |
-| Way off | Badly wrong | Asks "too hot or too cold?", then ±1.5 °C |
+| Too cold | Underdressed | −0.5 °C (future outfits warmer) |
 
 - Separate offsets for running and cycling, since the two feel different.
 - The offset is capped at ±5 °C, so one bad week can't wreck the rules.
-- Settings shows the current offset in plain words ("You run about 1.5 °C warmer than average") with a reset button.
-- Every rating is saved with its forecast, effort and distance, ready for smarter learning in v1.1.
-- Feedback is asked on the result screen once the session time has passed.
+- Settings shows the current offset in plain words ("You run about 1.5 °C warmer than average") with a reset button, and the line "Each rating moves this by 0.5 °C, up to ±5 °C."
+- Every rating is saved with its forecast, effort, distance and duration, ready for smarter learning in v1.1.
+- Feedback is asked on the result screen once the session has finished (start time + duration).
 
 ## Design
 
@@ -198,10 +218,12 @@ v1.0 is done when every box below is ticked on my own iPhone.
 
 - [ ] First launch shows "Getting to know you"; the profile survives closing and re-opening the app
 - [ ] Day picker allows today plus up to 5 days and nothing later
+- [ ] "What should I wear?" only works once day, time, distance, duration and effort are all set
+- [ ] Plan a session greets me by name
 - [ ] Forecast shown matches Open-Meteo for my location and chosen hour
 - [ ] Running and cycling give different outfits for the same weather
 - [ ] Each threshold in Outfit rules produces the item listed (checked at the boundaries, e.g. 7 and 8 °C)
-- [ ] Notes appear only when they apply, for both activities
+- [ ] Notes appear only when they apply, for both activities, including weather changes during the session
 - [ ] Each feedback rating moves the learned offset as specified, and Reset sets it to 0
 - [ ] With location refused or no signal, the app explains itself instead of crashing
 - [ ] Used before at least 3 runs and 2 rides, with feedback logged
