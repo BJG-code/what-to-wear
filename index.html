@@ -181,6 +181,20 @@
       border-top: 1px solid var(--border);
     }
 
+    /* "Hello Bradley" with a link to change your details beside it */
+    .greeting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      column-gap: 12px;
+    }
+
+    .greeting-row .link-button {
+      min-height: 44px;
+      font-size: 0.875rem;
+    }
+
     .greeting {
       color: var(--muted);
       font-size: 1.125rem;
@@ -425,7 +439,7 @@
       <div>
         <label class="label" for="name">Your name</label>
         <input id="name" class="text-input" type="text" autocomplete="given-name" autocapitalize="words"
-               enterkeyhint="done" maxlength="40" aria-describedby="name-error">
+               autocorrect="off" spellcheck="false" enterkeyhint="done" maxlength="40" aria-describedby="name-error">
         <p id="name-error" class="error" hidden>Please tell us your name.</p>
       </div>
 
@@ -454,7 +468,10 @@
     <!-- Screen 1: Plan a session -->
     <div id="plan-screen" class="screen" hidden>
       <div>
-        <p id="greeting" class="greeting"></p>
+        <div class="greeting-row">
+          <p id="greeting" class="greeting"></p>
+          <button type="button" class="link-button" id="edit-profile">Change your details</button>
+        </div>
         <h2 class="screen-title">Plan a session</h2>
       </div>
 
