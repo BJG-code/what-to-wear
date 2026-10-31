@@ -181,20 +181,7 @@
       border-top: 1px solid var(--border);
     }
 
-    /* "Hello Bradley" with a link to change your details beside it */
-    .greeting-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      column-gap: 12px;
-    }
-
-    .greeting-row .link-button {
-      min-height: 44px;
-      font-size: 0.875rem;
-    }
-
+    /* "Hello Bradley!" above Plan a session */
     .greeting {
       color: var(--muted);
       font-size: 1.125rem;
@@ -744,6 +731,192 @@
       color: inherit;
     }
 
+    /* Settings cog beside the logo */
+    .logo {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .logo > div {
+      min-width: 0;
+    }
+
+    .icon-button {
+      flex: 0 0 44px;
+      height: 44px;
+      margin-right: -8px;
+      display: grid;
+      place-items: center;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .icon-button:hover {
+      background: var(--selected-tint);
+    }
+
+    .icon-button:focus-visible {
+      outline: 2px solid var(--purple-light);
+      outline-offset: 2px;
+    }
+
+    /* Settings: cards of rows, label on the left and value on the right */
+    #settings-heading {
+      outline: none;
+    }
+
+    .settings-card {
+      list-style: none;
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 0 16px;
+    }
+
+    .settings-row,
+    .learned-row,
+    .rules li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 56px;
+      padding: 8px 0;
+    }
+
+    .settings-card > * + *,
+    .rules li + li {
+      border-top: 1px solid var(--border);
+    }
+
+    .settings-card > .error {
+      border-top: none;
+      margin: -4px 0 8px;
+    }
+
+    .settings-row.stacked {
+      display: block;
+      padding: 12px 0;
+    }
+
+    .settings-row.stacked p {
+      margin-bottom: 8px;
+    }
+
+    .row-input {
+      flex: 1;
+      min-width: 0;
+      min-height: 44px;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      text-align: right;
+      padding: 0 8px;
+    }
+
+    .row-input:focus-visible {
+      outline: 2px solid var(--purple-light);
+    }
+
+    #settings-units {
+      color: var(--muted);
+    }
+
+    .learned-row strong .offset {
+      color: var(--purple-light);
+    }
+
+    .learned-row small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .learned-row .button,
+    .reset-rules {
+      min-height: 44px;
+      padding: 8px 16px;
+      color: var(--text);
+    }
+
+    .reset-rules {
+      margin-top: 12px;
+      color: var(--purple-light);
+    }
+
+    .reset-rules:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    #rules {
+      margin-top: 12px;
+    }
+
+    .rules li {
+      flex-wrap: wrap;
+      padding: 0;
+    }
+
+    /* Each rule is a button you tap to show its − and + */
+    .rule-button {
+      flex: 1 1 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 56px;
+      align-items: center;
+      background: none;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .rule-button span:last-child {
+      text-align: right;
+    }
+
+    .rule-button[aria-expanded="true"] span:last-child {
+      color: var(--purple-light);
+      font-weight: 700;
+    }
+
+    .rule-button:focus-visible {
+      outline: 2px solid var(--purple-light);
+      outline-offset: -2px;
+      border-radius: 8px;
+    }
+
+    .rule-editor {
+      flex: 1 1 100%;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding-bottom: 12px;
+    }
+
+    .rule-editor .step-button {
+      background: var(--selected-tint);
+    }
+
+    .rule-editor .step-button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
     [hidden] {
       display: none !important;
     }
@@ -753,8 +926,14 @@
   <main>
     <!-- Logo and tagline, shared by Getting to know you and Plan a session -->
     <header class="logo" id="logo">
-      <h1><img src="assets/logo.png" alt="What to wear" width="1438" height="246"></h1>
-      <p class="tagline">Whatever the weather, get it right</p>
+      <div>
+        <h1><img src="assets/logo.png" alt="What to wear" width="1438" height="246"></h1>
+        <p class="tagline">Whatever the weather, get it right</p>
+      </div>
+      <!-- Settings cog, on Plan a session only -->
+      <button type="button" class="icon-button" id="open-settings" aria-label="Settings" hidden>
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
     </header>
 
     <!-- Screen 0: Getting to know you (first launch only) -->
@@ -796,10 +975,7 @@
     <!-- Screen 1: Plan a session -->
     <div id="plan-screen" class="screen" hidden>
       <div>
-        <div class="greeting-row">
-          <p id="greeting" class="greeting"></p>
-          <button type="button" class="link-button" id="edit-profile">Change your details</button>
-        </div>
+        <p id="greeting" class="greeting"></p>
         <h2 class="screen-title">Plan a session</h2>
       </div>
 
@@ -937,6 +1113,61 @@
           </div>
           <p id="feedback-thanks" role="status" tabindex="-1" hidden></p>
         </section>
+      </section>
+    </div>
+
+    <!-- Screen 3: Settings, from the cog on Plan a session -->
+    <div id="settings-screen" class="screen" hidden>
+      <div class="top-bar">
+        <button type="button" class="back-button" id="settings-back" aria-label="Back to plan a session">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 class="screen-title" id="settings-heading" tabindex="-1">Settings</h2>
+      </div>
+
+      <section aria-labelledby="settings-profile-label">
+        <h3 class="label" id="settings-profile-label">Profile</h3>
+        <div class="settings-card">
+          <div class="settings-row">
+            <label for="settings-name">Name</label>
+            <input id="settings-name" class="row-input" type="text" autocomplete="given-name" autocapitalize="words"
+                   autocorrect="off" spellcheck="false" enterkeyhint="done" maxlength="40" aria-describedby="settings-name-error">
+          </div>
+          <p id="settings-name-error" class="error" hidden>A name can't be empty, so we've kept the old one.</p>
+          <div class="settings-row stacked" role="radiogroup" aria-labelledby="settings-warmth-label">
+            <p id="settings-warmth-label">Hot or cold</p>
+            <div class="choices">
+              <label><input type="radio" name="settings-warmth" value="hot"><span>Runs hot</span></label>
+              <label><input type="radio" name="settings-warmth" value="neutral"><span>Neutral</span></label>
+              <label><input type="radio" name="settings-warmth" value="cold"><span>Runs cold</span></label>
+            </div>
+          </div>
+          <div class="settings-row">
+            <span>Units</span>
+            <span id="settings-units">°C · km/h · km</span>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="settings-learned-label">
+        <h3 class="label" id="settings-learned-label">What the app has learned</h3>
+        <div class="settings-card" id="learned"></div>
+        <p class="hint">Each rating moves this by 0.5 °C, up to ±5 °C.</p>
+      </section>
+
+      <section aria-labelledby="settings-rules-label">
+        <h3 class="label" id="settings-rules-label">Your rules of thumb</h3>
+        <fieldset>
+          <legend class="visually-hidden">Rules for</legend>
+          <div class="choices">
+            <label><input type="radio" name="rules-activity" value="running" checked><span>Running</span></label>
+            <label><input type="radio" name="rules-activity" value="cycling"><span>Cycling</span></label>
+          </div>
+        </fieldset>
+        <!-- One row per item, filled in by app.js -->
+        <ul class="settings-card rules" id="rules" aria-label="Rules of thumb"></ul>
+        <p class="hint">Temperatures are dressing temperatures. Tap a row to change it.</p>
+        <button type="button" class="button reset-rules" id="reset-rules">Back to the starting rules</button>
       </section>
     </div>
 

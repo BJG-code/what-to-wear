@@ -27,7 +27,7 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 - [x] 1. No "Getting to know you" first-launch screen (name, runs hot/neutral/cold, units, "Let's go").
 - [x] 2. No separate "Plan a session" screen; everything is on one page.
 - [x] 3. No "Your outfit" result screen with a back arrow and summary line (e.g. "Wed 28 Oct · 07:00 · Easy 8 km run").
-- [ ] 4. No Settings screen or settings cog.
+- [x] 4. No Settings screen or settings cog.
 - [x] 5. The logo image and tagline aren't shown; the page uses a purple text heading instead.
 - [x] 6. No "Hello Bradley" greeting.
 
@@ -43,8 +43,8 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 ## Profile
 
 - [x] 13. Hot/cold choice says "Feel the cold / Feel normal / Run warm" and moves by 3 °C; should be "Runs hot / Neutral / Runs cold" moving by 2 °C.
-- [ ] 14. No units shown in the profile or Settings (km/h is already used, which is correct).
-- [ ] 15. Rules of thumb can't be viewed or edited.
+- [x] 14. No units shown in the profile or Settings (km/h is already used, which is correct).
+- [x] 15. Rules of thumb can't be viewed or edited. Done 31 Oct 2026: tap a row in Settings to move it 1 °C at a time; the rows stay in order.
 
 ## Weather
 
@@ -75,7 +75,7 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 ## Feedback
 
 - [x] 33. No feedback buttons (Too hot / Perfect / Too cold).
-- [ ] 34. No learned offsets (separate for running and cycling, ±0.5 °C a rating, capped at ±5 °C) and no Reset. Offsets done 31 Oct 2026; the Reset button comes with the Settings screen (session 10).
+- [x] 34. No learned offsets (separate for running and cycling, ±0.5 °C a rating, capped at ±5 °C) and no Reset. Offsets done 31 Oct 2026; Reset added in Settings 31 Oct 2026.
 - [x] 35. Ratings aren't saved with their forecast, effort, distance and duration.
 - [x] 36. No "only ask after the session has finished" logic.
 
