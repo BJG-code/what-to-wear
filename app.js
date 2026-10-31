@@ -1,5 +1,5 @@
 // Runs the page: finds your location, fetches the weather and shows what to wear.
-// There are two screens: "Plan a session" and "Your outfit".
+// There are three screens: "Getting to know you" (first launch only), "Plan a session" and "Your outfit".
 (function () {
   const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
   const PLACES_URL = 'https://geocoding-api.open-meteo.com/v1/search';
@@ -17,14 +17,22 @@
   };
 
   const el = (id) => document.getElementById(id);
-  const state = { activity: 'running', preference: 'normal', location: null, weather: null };
+  const WARMTH = ['hot', 'neutral', 'cold'];
+  // Your profile is null until you've filled in Getting to know you
+  const state = { activity: 'running', profile: null, location: null, weather: null };
+  // A runs hot / cold choice saved by the old version of the app, used to pre-tick the new one
+  let oldWarmth = null;
 
   // Remember choices on this device. Wrapped in try/catch because private browsing can block storage.
   function load() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
       if (saved.activity === 'running' || saved.activity === 'cycling') state.activity = saved.activity;
-      if (['cold', 'normal', 'warm'].includes(saved.preference)) state.preference = saved.preference;
+      const p = saved.profile;
+      if (p && typeof p.name === 'string' && p.name.trim() && WARMTH.includes(p.warmth)) {
+        state.profile = { name: p.name.trim(), warmth: p.warmth };
+      }
+      oldWarmth = { warm: 'hot', normal: 'neutral', cold: 'cold' }[saved.preference] || null;
       if (saved.location && typeof saved.location.latitude === 'number') state.location = saved.location;
     } catch (e) { /* start with defaults */ }
   }
@@ -34,7 +42,7 @@
       // Only remember a place you searched for; your current location is looked up fresh each time
       const location = state.location && state.location.source === 'search' ? state.location : null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        activity: state.activity, preference: state.preference, location,
+        activity: state.activity, profile: state.profile, location,
       }));
     } catch (e) { /* not remembered, but the page still works */ }
   }
@@ -50,8 +58,10 @@
     el('weather-status').hidden = !message;
   }
 
-  // Show one screen and hide the other, starting at the top of the page
+  // Show one screen and hide the others, starting at the top of the page
   function showScreen(name) {
+    el('profile-screen').hidden = name !== 'profile';
+    el('logo').hidden = name === 'outfit';
     el('plan-screen').hidden = name !== 'plan';
     el('outfit-screen').hidden = name !== 'outfit';
     window.scrollTo(0, 0);
@@ -62,6 +72,28 @@
     const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const time = when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     return [day.replace(',', ''), time, activity === 'cycling' ? 'Ride' : 'Run'].join(' · ');
+  }
+
+  // "Hello Bradley" at the top of Plan a session
+  function showGreeting() {
+    el('greeting').textContent = state.profile ? `Hello ${state.profile.name}` : '';
+  }
+
+  // Getting to know you: the name is needed; the other answers have a choice ticked already
+  function saveProfile(event) {
+    event.preventDefault();
+    const name = el('name').value.trim();
+    el('name-error').hidden = Boolean(name);
+    el('name').setAttribute('aria-invalid', String(!name));
+    if (!name) {
+      el('name').focus();
+      return;
+    }
+    const warmth = document.querySelector('input[name="warmth"]:checked').value;
+    state.profile = { name, warmth };
+    save();
+    showGreeting();
+    showScreen('plan');
   }
 
   function openOutfit() {
@@ -159,7 +191,7 @@
     ].filter(Boolean).join(' · ');
 
     const { items } = window.Clothing.recommend({
-      activity: state.activity, preference: state.preference, weather: w,
+      activity: state.activity, preference: state.profile ? state.profile.warmth : 'neutral', weather: w,
     });
     const list = el('kit');
     list.replaceChildren(...items.map(({ area, item }) => {
@@ -213,16 +245,28 @@
     load();
 
     // Tick the saved choices, and update the list whenever they change
-    for (const name of ['activity', 'preference']) {
-      for (const input of document.querySelectorAll(`input[name="${name}"]`)) {
-        input.checked = input.value === state[name];
-        input.addEventListener('change', () => {
-          state[name] = input.value;
-          save();
-          render();
-        });
-      }
+    for (const input of document.querySelectorAll('input[name="activity"]')) {
+      input.checked = input.value === state.activity;
+      input.addEventListener('change', () => {
+        state.activity = input.value;
+        save();
+        render();
+      });
     }
+
+    // Getting to know you, pre-filled with anything already known
+    const warmth = (state.profile && state.profile.warmth) || oldWarmth || 'neutral';
+    for (const input of document.querySelectorAll('input[name="warmth"]')) {
+      input.checked = input.value === warmth;
+    }
+    el('profile-screen').addEventListener('submit', saveProfile);
+    el('name').addEventListener('input', () => {
+      if (el('name').value.trim()) {
+        el('name-error').hidden = true;
+        el('name').removeAttribute('aria-invalid');
+      }
+    });
+    showGreeting();
 
     el('what-to-wear').addEventListener('click', openOutfit);
     // The back arrow does the same as the browser's back, so both end up in the same place
@@ -230,9 +274,9 @@
     window.addEventListener('popstate', (event) => {
       showScreen(event.state && event.state.screen === 'outfit' ? 'outfit' : 'plan');
     });
-    // Always open on Plan a session, even after a reload
+    // Open on Getting to know you the first time, then always on Plan a session, even after a reload
     history.replaceState(null, '');
-    showScreen('plan');
+    showScreen(state.profile ? 'plan' : 'profile');
 
     el('change-location').addEventListener('click', () => showSearch(el('search').hidden));
     el('use-device').addEventListener('click', useDeviceLocation);

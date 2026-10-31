@@ -34,6 +34,16 @@ async function mockServices(page, { weather = sampleWeather, places = samplePlac
   return requests;
 }
 
+// Pretends Getting to know you was filled in earlier, so the page opens on Plan a session.
+// Only fills it in when nothing is saved yet, so later saves survive a reload.
+async function withProfile(page, profile = { name: 'Bradley', warmth: 'neutral' }) {
+  await page.addInitScript((saved) => {
+    if (!localStorage.getItem('what-to-wear')) {
+      localStorage.setItem('what-to-wear', JSON.stringify({ profile: saved }));
+    }
+  }, profile);
+}
+
 // Taps "What should I wear?" to go from Plan a session to Your outfit
 async function openOutfit(page) {
   await page.getByRole('button', { name: 'What should I wear?' }).click();
@@ -42,6 +52,9 @@ async function openOutfit(page) {
 
 test.describe('with location allowed', () => {
   test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
+  test.beforeEach(async ({ page }, testInfo) => {
+    if (!testInfo.title.startsWith('first launch')) await withProfile(page);
+  });
 
   test('page has the right title in the browser tab', async ({ page }) => {
     await mockServices(page);
@@ -84,25 +97,82 @@ test.describe('with location allowed', () => {
     await expect(page.locator('#kit')).toContainText('Bib tights');
   });
 
-  test('saying you feel the cold gives warmer kit', async ({ page }) => {
-    await mockServices(page);
-    await page.goto('/');
-    await openOutfit(page);
-    await expect(page.locator('#kit')).toContainText('Shorts or 3/4 tights');
-    await page.getByRole('button', { name: 'Back to plan a session' }).click();
-    await page.getByText('Feel the cold').click();
-    await openOutfit(page);
-    await expect(page.locator('#kit')).toContainText('Running tights');
-  });
-
   test('remembers your choices next time', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
     await page.getByText('Cycling').click();
-    await page.getByText('Feel the cold').click();
     await page.reload();
     await expect(page.getByRole('radio', { name: 'Cycling' })).toBeChecked();
-    await expect(page.getByRole('radio', { name: 'Feel the cold' })).toBeChecked();
+    await expect(page.getByText('Hello Bradley')).toBeVisible();
+  });
+
+  test('first launch: opens on Getting to know you', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Getting to know you' })).toBeVisible();
+    await expect(page.getByText('Three quick questions so every recommendation fits you.')).toBeVisible();
+    await expect(page.getByRole('img', { name: 'What to wear' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Your name' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Neutral' })).toBeChecked();
+    await expect(page.getByRole('radio', { name: 'Runs hot' })).not.toBeChecked();
+    await expect(page.getByRole('radio', { name: 'Runs cold' })).not.toBeChecked();
+    await expect(page.getByText('Runs hot dresses you 2 °C lighter; runs cold, 2 °C warmer.')).toBeVisible();
+    await expect(page.locator('.units')).toHaveText(/Temperature\s*°C\s*Wind\s*km\/h\s*Distance\s*km/);
+    await expect(page.locator('#plan-screen')).toBeHidden();
+    await expect(page.locator('#outfit-screen')).toBeHidden();
+  });
+
+  test('first launch: "Let\'s go" needs a name', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByRole('textbox', { name: 'Your name' }).fill('   ');
+    await page.getByRole('button', { name: 'Let\'s go' }).click();
+    await expect(page.getByText('Please tell us your name.')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Your name' })).toBeFocused();
+    await expect(page.locator('#plan-screen')).toBeHidden();
+  });
+
+  test('first launch: "Let\'s go" says hello, and the profile survives closing the app', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByRole('textbox', { name: 'Your name' }).fill(' Bradley ');
+    await page.getByText('Runs cold', { exact: true }).click();
+    await page.getByRole('button', { name: 'Let\'s go' }).click();
+    await expect(page.getByRole('heading', { name: 'Plan a session' })).toBeVisible();
+    await expect(page.locator('#greeting')).toHaveText('Hello Bradley');
+    await expect(page.locator('#profile-screen')).toBeHidden();
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Plan a session' })).toBeVisible();
+    await expect(page.locator('#greeting')).toHaveText('Hello Bradley');
+    await expect(page.locator('#profile-screen')).toBeHidden();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')).profile);
+    expect(saved).toEqual({ name: 'Bradley', warmth: 'cold' });
+  });
+
+  test('first launch: the name box and buttons are big enough to tap', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    for (const target of [
+      page.getByRole('textbox', { name: 'Your name' }),
+      page.getByRole('button', { name: 'Let\'s go' }),
+      page.locator('input[value="hot"] + span'),
+    ]) {
+      const box = await target.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
+  });
+
+  test('first launch: a choice saved by the old version is ticked for you', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('what-to-wear', JSON.stringify({ activity: 'running', preference: 'warm' }));
+    });
+    await mockServices(page);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Getting to know you' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Runs hot' })).toBeChecked();
   });
 
   test('can change to another place, and go back to your location', async ({ page }) => {
@@ -252,6 +322,7 @@ test.describe('with location allowed', () => {
 
 test.describe('with location blocked', () => {
   test('asks you to search for a town instead', async ({ page }) => {
+    await withProfile(page);
     await page.addInitScript(() => {
       navigator.geolocation.getCurrentPosition = (success, error) => error({ code: 1, message: 'denied' });
     });

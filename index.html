@@ -132,6 +132,60 @@
       color: var(--muted);
     }
 
+    /* Getting to know you */
+    .intro {
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .text-input {
+      width: 100%;
+      min-height: 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+
+    .text-input:focus-visible {
+      outline: 2px solid var(--purple-light);
+      outline-offset: 1px;
+    }
+
+    .hint {
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .error {
+      font-size: 0.875rem;
+      color: var(--purple-light);
+      margin-top: 6px;
+    }
+
+    /* Units list: label on the left, unit on the right */
+    .units {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 0 16px;
+    }
+
+    .units div {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+    }
+
+    .units div + div {
+      border-top: 1px solid var(--border);
+    }
+
+    .greeting {
+      color: var(--muted);
+      font-size: 1.125rem;
+    }
+
     /* Logo and tagline at the top */
     .logo h1 {
       line-height: 0;
@@ -158,6 +212,7 @@
 
     .label {
       display: block;
+      font-weight: 400;
       font-size: 0.875rem;
       color: var(--muted);
       margin-bottom: 6px;
@@ -270,7 +325,10 @@
     }
 
     .choices span {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
       padding: 10px 4px;
     }
 
@@ -351,29 +409,60 @@
 </head>
 <body>
   <main>
-    <!-- Screen 1: Plan a session -->
-    <div id="plan-screen" class="screen">
-      <header class="logo">
-        <h1><img src="assets/logo.png" alt="What to wear" width="1438" height="246"></h1>
-        <p class="tagline">Whatever the weather, get it right</p>
-      </header>
+    <!-- Logo and tagline, shared by Getting to know you and Plan a session -->
+    <header class="logo" id="logo">
+      <h1><img src="assets/logo.png" alt="What to wear" width="1438" height="246"></h1>
+      <p class="tagline">Whatever the weather, get it right</p>
+    </header>
 
-      <h2 class="screen-title">Plan a session</h2>
+    <!-- Screen 0: Getting to know you (first launch only) -->
+    <form id="profile-screen" class="screen" novalidate hidden>
+      <div>
+        <h2 class="screen-title">Getting to know you</h2>
+        <p class="intro">Three quick questions so every recommendation fits you.</p>
+      </div>
+
+      <div>
+        <label class="label" for="name">Your name</label>
+        <input id="name" class="text-input" type="text" autocomplete="given-name" autocapitalize="words"
+               enterkeyhint="done" maxlength="40" aria-describedby="name-error">
+        <p id="name-error" class="error" hidden>Please tell us your name.</p>
+      </div>
+
+      <fieldset>
+        <legend class="label">Do you run hot or cold?</legend>
+        <div class="choices">
+          <label><input type="radio" name="warmth" value="hot"><span>Runs hot</span></label>
+          <label><input type="radio" name="warmth" value="neutral" checked><span>Neutral</span></label>
+          <label><input type="radio" name="warmth" value="cold"><span>Runs cold</span></label>
+        </div>
+        <p class="hint">Runs hot dresses you 2 °C lighter; runs cold, 2 °C warmer.</p>
+      </fieldset>
+
+      <section aria-labelledby="units-label">
+        <h3 class="label" id="units-label">Units</h3>
+        <dl class="units">
+          <div><dt>Temperature</dt><dd>°C</dd></div>
+          <div><dt>Wind</dt><dd>km/h</dd></div>
+          <div><dt>Distance</dt><dd>km</dd></div>
+        </dl>
+      </section>
+
+      <button type="submit" class="primary-button">Let's go</button>
+    </form>
+
+    <!-- Screen 1: Plan a session -->
+    <div id="plan-screen" class="screen" hidden>
+      <div>
+        <p id="greeting" class="greeting"></p>
+        <h2 class="screen-title">Plan a session</h2>
+      </div>
 
       <fieldset>
         <legend class="label">Activity</legend>
         <div class="choices">
           <label><input type="radio" name="activity" value="running" checked><span>Running</span></label>
           <label><input type="radio" name="activity" value="cycling"><span>Cycling</span></label>
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend class="label">I usually</legend>
-        <div class="choices">
-          <label><input type="radio" name="preference" value="cold"><span>Feel the cold</span></label>
-          <label><input type="radio" name="preference" value="normal" checked><span>Feel normal</span></label>
-          <label><input type="radio" name="preference" value="warm"><span>Run warm</span></label>
         </div>
       </fieldset>
 
