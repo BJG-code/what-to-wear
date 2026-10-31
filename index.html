@@ -17,47 +17,297 @@
   <link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
+    :root {
+      --background: #0E0E12;
+      --surface: #18181F;
+      --border: #2A2A35;
+      --purple: #7C3AED;
+      --purple-light: #A78BFA;
+      --text: #ECECF1;
+      --muted: #9A9AA8;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
 
-    html,
-    body {
-      height: 100%;
-      background-color: #0E0E12;
+    html {
+      background-color: var(--background);
     }
 
     body {
-      /* Fill the whole screen; 100dvh accounts for Safari's moving address bar */
       min-height: 100vh;
       min-height: 100dvh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      /* Keep text clear of the notch and home bar */
-      padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right))
-               env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
+      /* Keep content clear of the notch and home bar */
+      padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+               max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      background-color: var(--background);
       font-family: "Carlito", Calibri, sans-serif;
-      color: #7C3AED;
-      text-align: center;
+      font-size: 18px;
+      line-height: 1.4;
+      color: var(--text);
       /* Stop iPhone enlarging text when the phone is turned sideways */
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
     }
 
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
     h1 {
+      font-size: 2.25rem;
       font-weight: 700;
-      /* Scales with screen width, but never smaller than 2rem or bigger than 4rem */
-      font-size: clamp(2rem, 9vw, 4rem);
-      line-height: 1.2;
-      /* When the text wraps, split it into lines of similar length */
-      text-wrap: balance;
+      line-height: 1.1;
+      color: var(--purple);
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .label {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    button,
+    input {
+      font: inherit;
+      color: inherit;
+    }
+
+    .button {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      color: var(--purple-light);
+      cursor: pointer;
+    }
+
+    /* Where you are */
+    .location-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #location-name {
+      font-weight: 700;
+    }
+
+    #search {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #search-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    #place {
+      flex: 1;
+      min-width: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    #places {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    #places button {
+      width: 100%;
+      text-align: left;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    .link-button {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      color: var(--purple-light);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* Choice buttons: running/cycling and how warm you feel */
+    fieldset {
+      border: none;
+    }
+
+    legend {
+      padding: 0;
+    }
+
+    .choices {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .choices label {
+      flex: 1;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .choices input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .choices span {
+      display: block;
+      padding: 10px 4px;
+    }
+
+    .choices label + label span {
+      border-left: 1px solid var(--border);
+    }
+
+    .choices input:checked + span {
+      background: var(--purple);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .choices input:focus-visible + span {
+      outline: 2px solid var(--purple-light);
+      outline-offset: -2px;
+    }
+
+    /* Weather and what to wear */
+    #temperature {
+      font-size: 3rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    #conditions {
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    #kit-heading {
+      margin-top: 24px;
+    }
+
+    #kit {
+      list-style: none;
+      border-top: 1px solid var(--border);
+    }
+
+    #kit li {
+      display: flex;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #kit .area {
+      flex: 0 0 56px;
+      color: var(--muted);
+    }
+
+    #status {
+      color: var(--muted);
+    }
+
+    footer {
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: inherit;
+    }
+
+    [hidden] {
+      display: none !important;
     }
   </style>
 </head>
 <body>
-  <h1>What to wear: coming soon</h1>
+  <main>
+    <h1>What to wear</h1>
+
+    <section aria-label="Location">
+      <span class="label">Weather for</span>
+      <div class="location-row">
+        <span id="location-name">Finding your location…</span>
+        <button type="button" class="button" id="change-location" aria-expanded="false" aria-controls="search">Change</button>
+      </div>
+      <div id="search" hidden>
+        <form id="search-form" role="search">
+          <input id="place" type="search" placeholder="Search for a town or city" aria-label="Town or city" autocomplete="off" enterkeyhint="search">
+          <button type="submit" class="button">Search</button>
+        </form>
+        <ul id="places" aria-label="Matching places"></ul>
+        <button type="button" class="link-button" id="use-device">Use my current location</button>
+      </div>
+    </section>
+
+    <fieldset>
+      <legend class="label">Activity</legend>
+      <div class="choices">
+        <label><input type="radio" name="activity" value="running" checked><span>Running</span></label>
+        <label><input type="radio" name="activity" value="cycling"><span>Cycling</span></label>
+      </div>
+    </fieldset>
+
+    <p id="status" role="status" hidden></p>
+
+    <section id="results" aria-label="Weather and what to wear" hidden>
+      <div>
+        <p id="temperature"></p>
+        <p id="conditions"></p>
+      </div>
+      <h2 id="kit-heading">Wear for your run</h2>
+      <ul id="kit"></ul>
+    </section>
+
+    <fieldset>
+      <legend class="label">I usually</legend>
+      <div class="choices">
+        <label><input type="radio" name="preference" value="cold"><span>Feel the cold</span></label>
+        <label><input type="radio" name="preference" value="normal" checked><span>Feel normal</span></label>
+        <label><input type="radio" name="preference" value="warm"><span>Run warm</span></label>
+      </div>
+    </fieldset>
+
+    <footer>
+      Weather data from <a href="https://open-meteo.com/">Open-Meteo</a>
+    </footer>
+  </main>
+
+  <script src="clothing.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
