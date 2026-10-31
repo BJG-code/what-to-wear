@@ -558,6 +558,38 @@
       padding: 20px 16px;
     }
 
+    /* The dressing temperature, with how it was worked out on the right */
+    .dressing {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding-bottom: 18px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dressing-total span {
+      display: block;
+      color: var(--purple-light);
+    }
+
+    .dressing-total strong {
+      display: block;
+      font-size: 3.2rem;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .dressing-parts {
+      list-style: none;
+      text-align: right;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      min-width: 0;
+    }
+
     .readings {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -767,6 +799,10 @@
 
       <section id="results" aria-label="Weather and what to wear" hidden>
         <div class="readings-card">
+          <div class="dressing">
+            <p class="dressing-total"><span>Dressing for</span> <strong id="dressing-temp"></strong></p>
+            <ul class="dressing-parts" id="dressing-parts" aria-label="How it was worked out"></ul>
+          </div>
           <dl class="readings" aria-label="Weather at the start">
             <div><dt>Temp</dt><dd id="reading-temperature"></dd></div>
             <div><dt>Wind km/h</dt><dd id="reading-wind"></dd></div>

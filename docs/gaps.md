@@ -57,8 +57,8 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 ## Outfit rules
 
-- [ ] 22. No dressing temperature: effort, distance and learned offset are missing, and cycling takes off 2 °C instead of 4 °C.
-- [ ] 23. The dressing temperature and how it was worked out aren't shown.
+- [x] 22. No dressing temperature: effort, distance and learned offset are missing, and cycling takes off 2 °C instead of 4 °C.
+- [x] 23. The dressing temperature and how it was worked out aren't shown.
 - [ ] 24. Running thresholds and items are different from the spec (vest 16+, T-shirt 11–15, long sleeve 6–10, long sleeve + gilet 5 or below; shorts 8+ else tights; headband 4–8; hat below 4; gloves below 7).
 - [ ] 25. Cycling thresholds and items are different from the spec (short sleeve 18+, + base layer 13–17, long sleeve + base layer 8–12, long sleeve + gilet 7 or below; shorts 12+ else tights; buff below 8; gloves below 10).
 - [ ] 26. Items not in the spec to remove: packable rain jacket at 30%, windproof jacket or gilet based on wind speed, overshoes, socks, arm and knee warmers, mitts, reflective kit.
