@@ -7,6 +7,7 @@
 - Day, start time, distance, effort and the new duration are all required before an outfit is shown. The outfit is always for the chosen day and time, never "right now".
 - New **Duration** input after Distance, used to warn about weather changes during the session.
 - Plan a session greets you by name: "Hello Bradley".
+- The greeting ends with an exclamation mark: "Hello Bradley!" (agreed later on 31 Oct 2026).
 - Wind is shown in km/h, not mph. The 25 mph gust threshold becomes 40 km/h.
 - Sun cream and sunglasses added to the Accessories card.
 - Feedback is three buttons: Too hot / Perfect / Too cold. "Way off" is removed.
@@ -49,7 +50,7 @@ Screens in v1.0 (mockups in docs/mockups/):
 | Screen | Mockup | Contents |
 | --- | --- | --- |
 | Getting to know you (first launch) | main.png | Logo + tagline, name, runs hot / neutral / runs cold, units, "Let's go" |
-| Plan a session | plan.png | Logo + tagline and settings cog, "Hello Bradley" greeting, activity, day (today + 5), start time, distance, duration, effort, "What should I wear?" |
+| Plan a session | plan.png | Logo + tagline and settings cog, "Hello Bradley!" greeting, activity, day (today + 5), start time, distance, duration, effort, "What should I wear?" |
 | Your outfit | outfit.png | Dressing temperature and its breakdown, six weather readings, three outfit cards, notes that apply, three feedback buttons |
 | Settings | settings.png | Profile, learned offsets with Reset, rules of thumb (running / cycling tabs) |
 
@@ -61,7 +62,7 @@ The profile is set once on first launch and editable in Settings; the session in
 
 | Field | Options | Used for |
 | --- | --- | --- |
-| Name | Free text | Greeting: "Hello Bradley" at the top of Plan a session |
+| Name | Free text | Greeting: "Hello Bradley!" at the top of Plan a session |
 | Do you run hot or cold? | Runs hot / Neutral / Runs cold | Shifts every recommendation warmer or cooler |
 | Your rules of thumb | Edit the starting thresholds (see Outfit rules) | Your own starting logic |
 | Units | °C, km/h, km (default) | Display only |

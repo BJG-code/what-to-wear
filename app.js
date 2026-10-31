@@ -74,9 +74,9 @@
     return [day.replace(',', ''), time, activity === 'cycling' ? 'Ride' : 'Run'].join(' · ');
   }
 
-  // "Hello Bradley" at the top of Plan a session
+  // "Hello Bradley!" at the top of Plan a session
   function showGreeting() {
-    el('greeting').textContent = state.profile ? `Hello ${state.profile.name}` : '';
+    el('greeting').textContent = state.profile ? `Hello ${state.profile.name}!` : '';
   }
 
   // Getting to know you: the name is needed; the other answers have a choice ticked already
