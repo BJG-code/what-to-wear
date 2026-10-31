@@ -1,6 +1,26 @@
 # Gap list: current app vs spec
 
-Every difference between the app as it is today and `docs/spec.md` (updated 31 Oct 2026). Pick one per session and tick it off when done.
+Every difference between the app as it is today and `docs/spec.md` (updated 31 Oct 2026). Tick each gap off when done.
+
+## Build order
+
+One session at a time, in this order. Each builds on the one before. Target: on the iPhone by Sun 22 Nov 2026, so about three or four sessions a week.
+
+| Session | Builds | Gaps |
+| --- | --- | --- |
+| 1 | Logo and tagline, exact colours, font order | 5, 37, 39 |
+| 2 | Split into "Plan a session" and "Your outfit" screens | 2, 3 |
+| 3 | "Getting to know you" screen, "Hello Bradley", Runs hot / Neutral / Runs cold | 1, 6, 13 |
+| 4 | Day, start time, distance, duration and effort inputs, and the "What should I wear?" button | 7, 8, 9, 10, 11, 12 |
+| 5 | Forecast for the chosen day and time, six readings, central London fallback, decide on town search | 16, 17, 18, 20, 21 |
+| 6 | Dressing temperature and its breakdown | 22, 23 |
+| 7 | New running and cycling rules, gilet, waterproof, sun items, remove extra items | 24, 25, 26, 27, 28, 29 |
+| 8 | Three outfit cards and the notes, including weather changes during the session | 19, 30, 31, 32 |
+| 9 | Feedback buttons, learned offsets, saved ratings, ask only after the session | 33, 34, 35, 36 |
+| 10 | Settings screen and cog, units, rules of thumb | 4, 14, 15 |
+| 11 | Home-screen icon, bigger tap targets, update README and ROADMAP | 38, 40, 41 |
+
+Gap 42 (rewriting the old automated checks) happens in every session, alongside the gap being fixed.
 
 ## Screens and flow
 

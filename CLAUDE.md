@@ -124,7 +124,7 @@ Shown below the cards only when they apply:
 
 ## How we work
 
-- **One feature per session.** Usually one gap from `docs/gaps.md`. Keep the change small and finish it.
+- **One feature per session.** Follow the build order in `docs/gaps.md` and do the next session that isn't ticked off. Keep the change small and finish it.
 - **Explain in plain English.** Bradley is not an engineer. Say what changed, why, and how to check it on the phone. Avoid jargon, or explain it in a few words when it can't be avoided.
 - **Keep the automated checks passing.** Run `npm test` before every commit; the same checks run on every pull request (`.github/workflows/checks.yml`). Add or update tests for every rule you build, including the boundaries (e.g. 7 and 8 °C). Never skip, weaken or delete a test just to make it pass.
 - Write short, plain-English comments in the code, matching the current style.
