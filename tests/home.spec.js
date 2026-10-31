@@ -44,8 +44,17 @@ async function withProfile(page, profile = { name: 'Bradley', warmth: 'neutral' 
   }, profile);
 }
 
-// Taps "What should I wear?" to go from Plan a session to Your outfit
+// Fills in the session: today, 07:00, 8 km, Easy (unless told otherwise)
+async function fillSession(page, { time = '07:00', distance = '8', effort = 'Easy' } = {}) {
+  await page.locator('#days label').first().click();
+  await page.getByLabel('Start time').fill(time);
+  await page.getByRole('spinbutton', { name: 'Distance' }).fill(distance);
+  await page.locator('.efforts').getByText(effort, { exact: true }).click();
+}
+
+// Fills in the session, then taps "What should I wear?" to go from Plan a session to Your outfit
 async function openOutfit(page) {
+  await fillSession(page);
   await page.getByRole('button', { name: 'What should I wear?' }).click();
   await expect(page.locator('#outfit-screen')).toBeVisible();
 }
@@ -81,7 +90,7 @@ test.describe('with location allowed', () => {
     await page.goto('/');
     await openOutfit(page);
     await expect(page.getByRole('heading', { name: 'Your outfit' })).toBeVisible();
-    await expect(page.locator('#summary')).toContainText('Run');
+    await expect(page.locator('#summary')).toContainText('run');
     await expect(page.locator('#kit li')).toHaveText([
       'TopLong-sleeve top',
       'LegsShorts or 3/4 tights',
@@ -93,7 +102,7 @@ test.describe('with location allowed', () => {
     await page.goto('/');
     await page.getByText('Cycling').click();
     await openOutfit(page);
-    await expect(page.locator('#summary')).toContainText('Ride');
+    await expect(page.locator('#summary')).toContainText('ride');
     await expect(page.locator('#kit')).toContainText('Bib tights');
   });
 
@@ -302,6 +311,205 @@ test.describe('with location allowed', () => {
     expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
   });
 
+  test('day picker: today and the next 5 days, nothing later', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-28T07:00:00Z'));
+    await mockServices(page);
+    await page.goto('/');
+    await expect(page.getByText('Day · up to 5 days ahead')).toBeVisible();
+    await expect(page.locator('#days label')).toHaveText(['Wed28', 'Thu29', 'Fri30', 'Sat31', 'Sun1', 'Mon2']);
+    await expect(page.getByRole('radio', { name: 'Today, Wednesday 28 October' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Monday 2 November' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Tuesday 3 November' })).toHaveCount(0);
+    // No day is chosen until you pick one
+    await expect(page.locator('input[name="day"]:checked')).toHaveCount(0);
+  });
+
+  test('the day picker moves on when the app is reopened the next day', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-10-28T23:00:00Z') });
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByRole('radio', { name: 'Friday 30 October' }).check({ force: true });
+    await page.clock.fastForward('02:00:00');
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.locator('#days label').first()).toHaveText('Thu29');
+    await expect(page.locator('#days label')).toHaveCount(6);
+    // Your choice is kept
+    await expect(page.getByRole('radio', { name: 'Friday 30 October' })).toBeChecked();
+  });
+
+  test('"What should I wear?" only works once every input is filled in', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const wear = page.getByRole('button', { name: 'What should I wear?' });
+    await wear.click();
+    await expect(page.locator('#plan-screen')).toBeVisible();
+    await expect(page.locator('#outfit-screen')).toBeHidden();
+    await expect(page.locator('#session-error')).toHaveText(
+      'Please add the day, start time, distance, duration and effort first.'
+    );
+    await expect(page.getByText('Choose a day.')).toBeVisible();
+    await expect(page.getByText('Choose a start time.')).toBeVisible();
+    await expect(page.getByText('Enter a distance in km.')).toBeVisible();
+    await expect(page.getByText('Enter how long it will take, in minutes.')).toBeVisible();
+    await expect(page.getByText('Choose an effort.')).toBeVisible();
+
+    // Each message goes as soon as that input is filled in
+    await page.locator('#days label').nth(1).click();
+    await expect(page.getByText('Choose a day.')).toBeHidden();
+    await page.getByLabel('Start time').fill('06:30');
+    await expect(page.getByText('Choose a start time.')).toBeHidden();
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('10');
+    await expect(page.getByText('Enter a distance in km.')).toBeHidden();
+    await expect(page.getByText('Enter how long it will take, in minutes.')).toBeHidden();
+
+    // Still missing the effort
+    await wear.click();
+    await expect(page.locator('#session-error')).toHaveText('Please add the effort first.');
+    await expect(page.locator('#outfit-screen')).toBeHidden();
+
+    await page.locator('.efforts').getByText('Hard', { exact: true }).click();
+    await expect(page.locator('#session-error')).toBeHidden();
+    await wear.click();
+    await expect(page.locator('#outfit-screen')).toBeVisible();
+    await expect(page.locator('#summary')).toContainText('06:30 · Hard 10 km run');
+  });
+
+  test('a missing input is pointed out first', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await fillSession(page);
+    await page.getByLabel('Start time').fill('');
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#session-error')).toHaveText('Please add the start time first.');
+    await expect(page.getByLabel('Start time')).toBeFocused();
+    await expect(page.getByLabel('Start time')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  test('distance and duration must make sense', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await fillSession(page, { distance: '0' });
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#session-error')).toHaveText('Please add the distance and duration first.');
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('5');
+    await page.getByRole('spinbutton', { name: 'Duration' }).fill('0');
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#session-error')).toHaveText('Please add the duration first.');
+    await expect(page.locator('#outfit-screen')).toBeHidden();
+  });
+
+  test('duration is worked out from the distance: running about 6 min/km', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    await expect(duration).toHaveValue('');
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('8');
+    await expect(duration).toHaveValue('48');
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('5.5');
+    await expect(duration).toHaveValue('33');
+    await expect(page.getByText('Worked out from the distance. Change it if you like.')).toBeVisible();
+  });
+
+  test('duration is worked out from the distance: cycling about 25 km/h', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByText('Cycling').click();
+    const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('25');
+    await expect(duration).toHaveValue('60');
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('30');
+    await expect(duration).toHaveValue('72');
+    // Switching to running works it out again
+    await page.getByText('Running').click();
+    await expect(duration).toHaveValue('180');
+  });
+
+  test('a duration you type yourself is kept', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const distance = page.getByRole('spinbutton', { name: 'Distance' });
+    const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    await distance.fill('8');
+    await duration.fill('55');
+    await distance.fill('10');
+    await page.getByText('Cycling').click();
+    await expect(duration).toHaveValue('55');
+    await fillSession(page, { distance: '10' });
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#outfit-screen')).toBeVisible();
+    // Emptying it hands it back to the distance
+    await page.goBack();
+    await duration.fill('');
+    await distance.fill('12');
+    await expect(duration).toHaveValue('29');
+  });
+
+  test('the − and + buttons change the distance by 1 km, never below 1 km', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const distance = page.getByRole('spinbutton', { name: 'Distance' });
+    const more = page.getByRole('button', { name: '1 km more' });
+    const less = page.getByRole('button', { name: '1 km less' });
+    await more.click();
+    await expect(distance).toHaveValue('1');
+    await more.click();
+    await more.click();
+    await expect(distance).toHaveValue('3');
+    await expect(page.getByRole('spinbutton', { name: 'Duration' })).toHaveValue('18');
+    await distance.fill('1.5');
+    await less.click();
+    await expect(distance).toHaveValue('1');
+    await less.click();
+    await expect(distance).toHaveValue('1');
+  });
+
+  test('effort shows Easy, Medium and Hard with their heart rates', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await expect(page.getByText('Effort · average heart rate')).toBeVisible();
+    await expect(page.locator('.efforts label')).toHaveText([
+      'Easy110–140 bpm', 'Medium140–170 bpm', 'Hard170+ bpm',
+    ]);
+    await expect(page.locator('input[name="effort"]:checked')).toHaveCount(0);
+    await page.locator('.efforts').getByText('Medium', { exact: true }).click();
+    await expect(page.getByRole('radio', { name: /Medium/ })).toBeChecked();
+    await expect(page.locator('input[value="medium"] + span')).toHaveCSS('border-top-color', 'rgb(196, 167, 255)');
+  });
+
+  test('summary line for a ride on a later day', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-28T07:00:00Z'));
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByText('Cycling').click();
+    await page.getByRole('radio', { name: 'Saturday 31 October' }).check({ force: true });
+    await page.getByLabel('Start time').fill('17:45');
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('42.5');
+    await page.locator('.efforts').getByText('Medium', { exact: true }).click();
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#summary')).toHaveText('Sat 31 Oct · 17:45 · Medium 42.5 km ride');
+  });
+
+  test('Plan a session inputs are big enough to tap and fit the screen', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    for (const target of [
+      page.locator('#days label span').first(),
+      page.getByLabel('Start time'),
+      page.getByRole('button', { name: '1 km less' }),
+      page.getByRole('button', { name: '1 km more' }),
+      page.locator('.stepper .unit-input'),
+      page.locator('.duration .unit-input'),
+      page.locator('.efforts span').first(),
+    ]) {
+      const box = await target.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+    }
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('123.5');
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
+  });
+
   test('opens on Plan a session, with the outfit hidden', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
@@ -316,7 +524,7 @@ test.describe('with location allowed', () => {
     await page.goto('/');
     await openOutfit(page);
     await expect(page.locator('#plan-screen')).toBeHidden();
-    await expect(page.locator('#summary')).toHaveText('Wed 28 Oct · 07:00 · Run');
+    await expect(page.locator('#summary')).toHaveText('Wed 28 Oct · 07:00 · Easy 8 km run');
     await expect(page.locator('#kit li').first()).toBeVisible();
   });
 
