@@ -376,12 +376,13 @@
       return li;
     }));
 
-    // Until the new outfit rules arrive, the rain chance is the worst hour of the session
+    // Temperature, cloud and daylight at the start; gusts and rain from the worst hour of the session
     const weather = {
-      windSpeed: w.start.windSpeed || 0,
-      rainChance: w.worstRainChance || 0,
+      temperature: w.start.temperature,
+      cloudCover: w.start.cloudCover,
       isDay: w.start.isDay,
-      sunny: w.start.cloudCover !== null && w.start.cloudCover <= window.Weather.SUNNY_CLOUD,
+      gusts: w.worstGusts,
+      rainChance: w.worstRainChance,
     };
     const { items } = window.Clothing.recommend({
       activity: session.activity, dressingTemp: dressing.total, weather,

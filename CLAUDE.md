@@ -97,7 +97,7 @@ Duration does not change the dressing temperature.
 | Buff | Below 8 |
 | Gloves | Below 10 |
 
-**Both activities:** sun cream when the actual temperature is 16 °C or more, in daylight, and not overcast; sunglasses in daylight when cloud cover is 30% or less. Both go in the Accessories card.
+**Both activities:** sun cream when the actual temperature is 16 °C or more, in daylight, and not overcast (cloud cover under 50%); sunglasses in daylight when cloud cover is 30% or less. Both go in the Accessories card.
 
 **Worked example:** easy 8 km run, feels like 6 °C, neutral, no learned offset → 6 + 0 + 2 + 0 + 0 = 8 °C → long sleeve, shorts, headband.
 
