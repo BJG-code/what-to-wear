@@ -17,7 +17,7 @@ One session at a time, in this order. Each builds on the one before. Target: on 
 | 7 | New running and cycling rules, gilet, waterproof, sun items, remove extra items | 24, 25, 26, 27, 28, 29 |
 | 8 | Three outfit cards and the notes, including weather changes during the session | 19, 30, 31, 32 |
 | 9 | Feedback buttons, learned offsets, saved ratings, ask only after the session | 33, 34, 35, 36 |
-| 10 | Settings screen and cog, units, rules of thumb | 4, 14, 15 |
+| 10 | Settings screen and cog, units, rules of thumb, Reset for the learned offsets | 4, 14, 15, 34 |
 | 11 | Home-screen icon, bigger tap targets, update README and ROADMAP | 38, 40, 41 |
 
 Gap 42 (rewriting the old automated checks) happens in every session, alongside the gap being fixed.
@@ -74,10 +74,10 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 ## Feedback
 
-- [ ] 33. No feedback buttons (Too hot / Perfect / Too cold).
-- [ ] 34. No learned offsets (separate for running and cycling, ±0.5 °C a rating, capped at ±5 °C) and no Reset.
-- [ ] 35. Ratings aren't saved with their forecast, effort, distance and duration.
-- [ ] 36. No "only ask after the session has finished" logic.
+- [x] 33. No feedback buttons (Too hot / Perfect / Too cold).
+- [ ] 34. No learned offsets (separate for running and cycling, ±0.5 °C a rating, capped at ±5 °C) and no Reset. Offsets done 31 Oct 2026; the Reset button comes with the Settings screen (session 10).
+- [x] 35. Ratings aren't saved with their forecast, effort, distance and duration.
+- [x] 36. No "only ask after the session has finished" logic.
 
 ## Design
 

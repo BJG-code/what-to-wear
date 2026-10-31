@@ -15,11 +15,25 @@
   // Minutes per km, used to pre-fill the duration: running about 6 min/km, cycling about 25 km/h
   const PACE = { running: 6, cycling: 60 / 25 };
   const DAYS_AHEAD = 5;
+  // How many recent outfits to keep, waiting to be rated, and for how long after they finish
+  const KEEP_OUTFITS = 5;
+  const RATE_WITHIN_DAYS = 3;
+  const RATINGS = { hot: 'Too hot', perfect: 'Perfect', cold: 'Too cold' };
   // True once you've typed your own duration, so changing the distance doesn't overwrite it
   let durationTyped = false;
   // Your profile is null until you've filled in Getting to know you
   // session holds the day, start time, distance, duration and effort once "What should I wear?" is tapped
-  const state = { activity: 'running', profile: null, location: null, weather: null, session: null };
+  // offsets: learned from your feedback, separate for running and cycling (°C)
+  // ratings: every rating you've given, with its forecast, effort, distance and duration
+  // outfits: recent outfits you haven't rated yet, so you can come back and rate them after the session
+  const state = {
+    activity: 'running', profile: null, location: null, weather: null, session: null,
+    offsets: { running: 0, cycling: 0 }, ratings: [], outfits: [],
+  };
+  // Where the forecast on Your outfit is for, and the dressing temperature it gave
+  let rated = null;
+  // The session you've just rated, so Your outfit can say thanks
+  let justRated = null;
   // A runs hot / cold choice saved by the old version of the app, used to pre-tick the new one
   let oldWarmth = null;
   // Counts forecast requests, so an old answer arriving late is ignored
@@ -36,6 +50,19 @@
       }
       oldWarmth = { warm: 'hot', normal: 'neutral', cold: 'cold' }[saved.preference] || null;
       if (saved.location && typeof saved.location.latitude === 'number') state.location = saved.location;
+      if (saved.offsets) {
+        for (const activity of ['running', 'cycling']) {
+          const n = saved.offsets[activity];
+          if (typeof n === 'number' && Math.abs(n) <= window.Clothing.OFFSET_LIMIT) state.offsets[activity] = n;
+        }
+      }
+      if (Array.isArray(saved.ratings)) state.ratings = saved.ratings;
+      if (Array.isArray(saved.outfits)) {
+        // Forget outfits that finished too long ago to remember how they felt
+        const tooOld = Date.now() - RATE_WITHIN_DAYS * 24 * 60 * 60 * 1000;
+        state.outfits = saved.outfits.filter((o) => o && o.session && o.weather
+          && finishTime(restoreSession(o.session)) > tooOld);
+      }
     } catch (e) { /* start with defaults */ }
   }
 
@@ -45,6 +72,7 @@
       const location = state.location && state.location.source === 'search' ? state.location : null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         activity: state.activity, profile: state.profile, location,
+        offsets: state.offsets, ratings: state.ratings, outfits: state.outfits,
       }));
     } catch (e) { /* not remembered, but the page still works */ }
   }
@@ -66,7 +94,40 @@
     el('logo').hidden = name === 'outfit';
     el('plan-screen').hidden = name !== 'plan';
     el('outfit-screen').hidden = name !== 'outfit';
+    if (name === 'plan') showLastSession();
     window.scrollTo(0, 0);
+  }
+
+  // Each session is known by its activity and start, e.g. "running 2026-10-28T07:00"
+  function sessionId(session) {
+    return `${session.activity} ${session.startText}`;
+  }
+
+  // A session as saved on the phone: the start is kept as text, as dates don't save
+  function savedSession(session) {
+    const { start, ...rest } = session;
+    return rest;
+  }
+
+  function restoreSession(saved) {
+    const [day, time] = saved.startText.split('T');
+    const [y, m, d] = day.split('-').map(Number);
+    const [hours, minutes] = time.split(':').map(Number);
+    return { ...saved, start: new Date(y, m - 1, d, hours, minutes) };
+  }
+
+  // When the session ends: start + duration
+  function finishTime(session) {
+    return new Date(session.start.getTime() + session.duration * 60 * 1000);
+  }
+
+  // "07:48" today, or "Thu 29 Oct, 07:48" on another day
+  function whenText(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    if (dayValue(date) === dayValue(new Date())) return time;
+    const day = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    return `${day.replace(',', '')}, ${time}`;
   }
 
   // The line at the top of Your outfit, e.g. "Wed 28 Oct · 07:00 · Easy 8 km run"
@@ -225,13 +286,59 @@
     showDays();
     const session = readSession();
     if (!session) return;
+    // The learned offset at the time, so this outfit stays the same after you rate it
+    session.learnedOffset = state.offsets[session.activity];
+    goToOutfit(session);
+    fetchWeather();
+  }
+
+  function goToOutfit(session) {
     state.session = session;
+    justRated = null;
     el('summary').textContent = summaryText(session);
     // Adds a step to the browser history, so swiping back returns to Plan a session
     history.pushState({ screen: 'outfit' }, '');
     showScreen('outfit');
     el('back').focus();
-    fetchWeather();
+  }
+
+  // Your last finished session that hasn't been rated yet, if there is one
+  function lastUnrated() {
+    const now = Date.now();
+    const finished = state.outfits
+      .map((outfit) => ({ outfit, session: restoreSession(outfit.session) }))
+      .filter(({ session }) => finishTime(session).getTime() <= now)
+      .sort((a, b) => finishTime(b.session) - finishTime(a.session));
+    return finished[0] || null;
+  }
+
+  // On Plan a session: asks how your last session went, once it has finished
+  function showLastSession() {
+    const last = lastUnrated();
+    el('last-session').hidden = !last;
+    if (!last) return;
+    const kind = last.session.activity === 'cycling' ? 'ride' : 'run';
+    el('last-session-text').textContent = `How did the outfit feel for your ${kind}? ${summaryText(last.session)}`;
+  }
+
+  // "Rate it" reopens Your outfit just as it was, with the forecast you dressed for
+  function reopenLast() {
+    const last = lastUnrated();
+    if (!last) return;
+    goToOutfit(last.session);
+    ++weatherRequest;
+    state.weather = last.outfit.weather;
+    setWeatherStatus('');
+    render(last.outfit.place);
+  }
+
+  // "Not now": stops asking about that session
+  function forgetLast() {
+    const last = lastUnrated();
+    if (!last) return;
+    state.outfits = state.outfits.filter((o) => o !== last.outfit);
+    save();
+    showLastSession();
   }
 
   function showSearch(show) {
@@ -274,7 +381,7 @@
     if (!keepStatus) setStatus('');
     showSearch(false);
     // If Your outfit is waiting for a location, get its forecast now
-    if (!el('outfit-screen').hidden) fetchWeather();
+    if (!el('outfit-screen').hidden && !state.weather) fetchWeather();
   }
 
   // One call to Open-Meteo for the hourly forecast, then picks out the hours of your session
@@ -282,7 +389,9 @@
     const session = state.session;
     el('results').hidden = true;
     el('place-note').hidden = true;
+    el('feedback').hidden = true;
     state.weather = null;
+    rated = null;
     if (!session) return;
     if (!state.location) {
       setWeatherStatus('Finding your location…');
@@ -316,7 +425,7 @@
     }
     state.weather = forecast;
     setWeatherStatus('');
-    render();
+    render({ name: state.location.name, source: state.location.source });
   }
 
   // A temperature to the nearest whole degree, with a proper minus sign, e.g. "−3"
@@ -363,7 +472,8 @@
     return svg;
   }
 
-  function render() {
+  // place: where the forecast is for, { name, source }
+  function render(place) {
     if (!state.weather || !state.session) return;
     const w = state.weather;
     const shown = window.Weather.readings(w.start);
@@ -373,9 +483,9 @@
     el('reading-sky').textContent = shown.sky;
     el('reading-humidity').textContent = shown.humidity;
     el('reading-light').textContent = shown.light;
-    el('place-note').textContent = state.location.source === 'london'
+    el('place-note').textContent = place.source === 'london'
       ? 'Forecast for central London, as we couldn\'t get your location.'
-      : `Forecast for ${state.location.source === 'search' ? state.location.name : 'where you are now'}.`;
+      : `Forecast for ${place.source === 'search' ? place.name : 'where you are now'}.`;
     el('place-note').hidden = false;
 
     // The dressing temperature and how it was worked out
@@ -386,6 +496,7 @@
       effort: session.effort,
       distance: session.distance,
       warmth: state.profile ? state.profile.warmth : 'neutral',
+      learnedOffset: session.learnedOffset || 0,
     });
     el('dressing-temp').textContent = `${wholeDegrees(dressing.total)}°C`;
     el('dressing-parts').replaceChildren(...breakdownLines(dressing, session).map((line) => {
@@ -424,6 +535,75 @@
     }));
     el('notes').hidden = !notes.length;
     el('results').hidden = false;
+
+    // Remember this outfit, so you can come back and rate it once the session has finished
+    rated = { place, dressing };
+    const id = sessionId(session);
+    if (!state.ratings.some((r) => r.id === id)) {
+      const outfit = { id, session: savedSession(session), weather: w, place };
+      state.outfits = [outfit, ...state.outfits.filter((o) => o.id !== id)].slice(0, KEEP_OUTFITS);
+      save();
+    }
+    showFeedback();
+  }
+
+  // "How did the outfit feel?" Only asked once the session has finished, and only once per session.
+  function showFeedback() {
+    const session = state.session;
+    if (!session || !rated || el('results').hidden) return;
+    el('feedback').hidden = false;
+    const id = sessionId(session);
+    const rating = state.ratings.find((r) => r.id === id);
+    const finish = finishTime(session);
+    const finished = finish.getTime() <= Date.now();
+    el('feedback-buttons').hidden = Boolean(rating) || !finished;
+    el('feedback-wait').hidden = Boolean(rating) || finished;
+    el('feedback-wait').textContent = `You can rate it once you've finished, from ${whenText(finish)}.`;
+    el('feedback-thanks').hidden = !rating;
+    if (rating) el('feedback-thanks').textContent = thanksText(rating, justRated === id);
+  }
+
+  // What a rating did, in plain words
+  function thanksText(rating, justNow) {
+    if (!justNow) return `You rated this outfit ${RATINGS[rating.rating]}.`;
+    const kind = rating.activity === 'cycling' ? 'rides' : 'runs';
+    if (rating.rating === 'perfect') return `Thanks! Your ${kind} will keep dressing you the same way.`;
+    if (rating.learnedAfter === rating.learnedBefore) {
+      return `Thanks! That's saved, but your ${kind} are already as far as it goes (${signed(rating.learnedAfter)}).`;
+    }
+    const way = rating.rating === 'hot' ? 'lighter' : 'warmer';
+    return `Thanks! Future ${kind} will dress you 0.5° ${way}.`;
+  }
+
+  // Too hot / Perfect / Too cold: moves the learned offset and saves the rating with its forecast
+  function rate(rating) {
+    const session = state.session;
+    const id = sessionId(session);
+    if (!rated || state.ratings.some((r) => r.id === id)) return;
+    const before = state.offsets[session.activity];
+    const after = window.Clothing.learnFrom(before, rating);
+    state.offsets[session.activity] = after;
+    state.ratings.push({
+      id,
+      rating,
+      ratedAt: new Date().toISOString(),
+      activity: session.activity,
+      start: session.startText,
+      distance: session.distance,
+      duration: session.duration,
+      effort: session.effort,
+      warmth: state.profile ? state.profile.warmth : 'neutral',
+      place: rated.place,
+      dressingTemp: rated.dressing.total,
+      forecast: state.weather,
+      learnedBefore: before,
+      learnedAfter: after,
+    });
+    state.outfits = state.outfits.filter((o) => o.id !== id);
+    save();
+    justRated = id;
+    showFeedback();
+    el('feedback-thanks').focus();
   }
 
   async function searchPlaces(query) {
@@ -499,9 +679,20 @@
     // Plan a session inputs
     showDays();
     // If the app is left open past midnight, move the days along when you come back to it
+    // Coming back to the app also checks whether a session has finished and can be rated
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) showDays();
+      if (document.hidden) return;
+      showDays();
+      showFeedback();
+      if (!el('plan-screen').hidden) showLastSession();
     });
+    // If Your outfit is left open, the feedback buttons appear once the session has finished
+    setInterval(showFeedback, 30 * 1000);
+    for (const [id, rating] of [['rate-hot', 'hot'], ['rate-perfect', 'perfect'], ['rate-cold', 'cold']]) {
+      el(id).addEventListener('click', () => rate(rating));
+    }
+    el('rate-last').addEventListener('click', reopenLast);
+    el('skip-last').addEventListener('click', forgetLast);
     el('distance').addEventListener('input', fillDuration);
     el('distance-down').addEventListener('click', () => stepDistance(-1));
     el('distance-up').addEventListener('click', () => stepDistance(1));

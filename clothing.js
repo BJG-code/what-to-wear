@@ -38,7 +38,7 @@
   }
 
   // Works out the dressing temperature and each part of it, so the page can show how it was worked out.
-  // learnedOffset comes from your feedback (0 until feedback is built).
+  // learnedOffset comes from your feedback (see learnFrom), separate for running and cycling.
   function dressingTemperature({ activity, feelsLike, effort, distance, warmth, learnedOffset = 0 }) {
     const parts = {
       feelsLike,
@@ -130,7 +130,21 @@
     return outfit(without) !== outfit(dressing.total);
   }
 
-  const api = { recommend, dressingTemperature, startsChilly };
+  // Feedback: each rating moves the learned offset by half a degree, never past ±5 °C
+  const RATING_STEP = 0.5;
+  const OFFSET_LIMIT = 5;
+  const RATING_CHANGE = { hot: RATING_STEP, perfect: 0, cold: -RATING_STEP };
+
+  // The new learned offset after a rating: 'hot' (Too hot), 'perfect' or 'cold' (Too cold).
+  // Too hot makes future outfits lighter (+0.5), too cold makes them warmer (−0.5).
+  function learnFrom(offset, rating) {
+    const moved = (Number(offset) || 0) + (RATING_CHANGE[rating] || 0);
+    // Kept to the nearest half degree, so lots of ratings never add up to 1.4999…
+    const capped = Math.min(OFFSET_LIMIT, Math.max(-OFFSET_LIMIT, Math.round(moved * 2) / 2));
+    return capped || 0;
+  }
+
+  const api = { recommend, dressingTemperature, startsChilly, learnFrom, OFFSET_LIMIT };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else {
