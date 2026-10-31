@@ -345,6 +345,24 @@
     ];
   }
 
+  // Small icons beside the notes: a raindrop, wind, a light bulb and a thermometer
+  const NOTE_ICONS = {
+    rain: '<path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/>',
+    wind: '<path d="M3 9h11a3 3 0 1 0-3-3"/><path d="M3 15h15a3 3 0 1 1-3 3"/>',
+    dark: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.9.7 1.5 1.6 1.5 2.6V17h4v-.5c0-1 .6-1.9 1.5-2.6A6 6 0 0 0 12 3z"/>',
+    temperature: '<path d="M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z"/>',
+  };
+
+  function noteIcon(kind) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    for (const [name, v] of Object.entries({
+      viewBox: '0 0 24 24', width: '22', height: '22', fill: 'none', stroke: 'currentColor',
+      'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true',
+    })) svg.setAttribute(name, v);
+    svg.innerHTML = NOTE_ICONS[kind];
+    return svg;
+  }
+
   function render() {
     if (!state.weather || !state.session) return;
     const w = state.weather;
@@ -387,17 +405,24 @@
     const { items } = window.Clothing.recommend({
       activity: session.activity, dressingTemp: dressing.total, weather,
     });
-    const list = el('kit');
-    list.replaceChildren(...items.map(({ area, item }) => {
+    // One card each, e.g. "Long sleeve + Gilet"
+    for (const [id, area] of [['kit-upper', 'Upper body'], ['kit-lower', 'Lower body'], ['kit-accessories', 'Accessories']]) {
+      const names = items.filter((i) => i.area === area).map((i) => i.item);
+      el(id).textContent = names.length ? names.join(' + ') : 'None needed';
+    }
+
+    // Notes, only the ones that apply
+    const notes = [];
+    if (window.Clothing.startsChilly({ activity: session.activity, dressing, weather })) {
+      notes.push({ kind: 'temperature', text: 'You\'ll start a little chilly, but you\'ll warm up as you go.' });
+    }
+    notes.push(...window.Weather.notes(w, session.time));
+    el('notes').replaceChildren(...notes.map(({ kind, text }) => {
       const li = document.createElement('li');
-      const label = document.createElement('span');
-      label.className = 'area';
-      label.textContent = area;
-      const text = document.createElement('span');
-      text.textContent = item;
-      li.append(label, text);
+      li.append(noteIcon(kind), document.createTextNode(text));
       return li;
     }));
+    el('notes').hidden = !notes.length;
     el('results').hidden = false;
   }
 

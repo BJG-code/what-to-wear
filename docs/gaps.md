@@ -51,7 +51,7 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 - [x] 16. Uses the current weather (plus the highest rain chance over the next 3 hours), not the hourly forecast for the chosen day, time and duration.
 - [x] 17. Doesn't fetch gusts, humidity or cloud cover.
 - [x] 18. Shows a one-line summary instead of the six readings (temp, wind + gust, rain, sky, humidity, light).
-- [ ] 19. No notes about weather changing during the session.
+- [x] 19. No notes about weather changing during the session.
 - [x] 20. If location is refused, it asks you to search for a town; the spec says use central London and say so.
 - [x] 21. Town search and the remembered holiday location aren't in the spec (saved locations are a later idea). Decide: remove, or keep as an extra. Decided 31 Oct 2026: keep it, and added to the spec.
 
@@ -65,12 +65,12 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 - [x] 27. Sun rules differ: today "sunglasses and sun cream" appear together at 18 °C+ on clear days; should be sun cream at 16 °C+ (daylight, not overcast) and sunglasses separately when cloud cover is 30% or less.
 - [x] 28. Missing the running gilet rule (gusts 40 km/h or more and dressing temp below 12).
 - [x] 29. Running gets a waterproof when rain is 50%+; the spec says no kit change for rain when running (waterproof is cycling only).
-- [ ] 30. Kit is a head-to-toe list, not three cards (Upper body, Lower body, Accessories) with icons.
+- [x] 30. Kit is a head-to-toe list, not three cards (Upper body, Lower body, Accessories) with icons.
 
 ## Notes
 
-- [ ] 31. No notes section; rain, wind and dark become clothing items instead of notes ("rain likely", "gusty", "take lights").
-- [ ] 32. No "You'll start a little chilly, but you'll warm up as you go" note.
+- [x] 31. No notes section; rain, wind and dark become clothing items instead of notes ("rain likely", "gusty", "take lights").
+- [x] 32. No "You'll start a little chilly, but you'll warm up as you go" note.
 
 ## Feedback
 

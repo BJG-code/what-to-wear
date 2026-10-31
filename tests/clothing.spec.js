@@ -1,6 +1,6 @@
 // Checks the rules that decide what to wear, without opening the page.
 const { test, expect } = require('@playwright/test');
-const { recommend, dressingTemperature } = require('../clothing.js');
+const { recommend, dressingTemperature, startsChilly } = require('../clothing.js');
 
 // Daylight, cool, grey, calm and dry: nothing extra from the weather
 const calm = { temperature: 10, cloudCover: 80, isDay: true, gusts: 20, rainChance: 0 };
@@ -246,5 +246,44 @@ test.describe('items no longer in the rules', () => {
       'Shorts', 'Tights', 'Headband', 'Hat', 'Buff', 'Gloves', 'Sun cream', 'Sunglasses',
     ];
     expect([...new Set(everything)].filter((item) => !allowed.includes(item))).toEqual([]);
+  });
+});
+
+test.describe('"You\'ll start a little chilly" note', () => {
+  const chilly = (change, activity = 'running') => startsChilly({
+    activity, dressing: dressing({ activity, ...change }), weather: calm,
+  });
+
+  test('worked example: the 8 km adds +2 and takes off the gloves', () => {
+    // 6 °C alone: long sleeve, tights, headband, gloves. 8 °C: long sleeve, shorts, headband
+    expect(chilly({ feelsLike: 6, distance: 8 })).toBe(true);
+    // 7 °C alone gives a headband; 9 °C doesn't
+    expect(chilly({ feelsLike: 7, distance: 8 })).toBe(true);
+  });
+
+  test('effort counts too', () => {
+    // 10 °C alone: long sleeve. Hard +4 makes 14: T-shirt
+    expect(chilly({ effort: 'hard' })).toBe(true);
+  });
+
+  test('no note when nothing was added, even if the outfit is light', () => {
+    expect(chilly({ feelsLike: 20 })).toBe(false);
+  });
+
+  test('no note when the extra degrees don\'t change the outfit', () => {
+    // 12 °C and 13 °C are both a T-shirt and shorts
+    expect(chilly({ feelsLike: 12, distance: 5 })).toBe(false);
+  });
+
+  test('your profile and learned offset don\'t count, only distance and effort', () => {
+    // Runs hot takes 10 °C to 12 °C (T-shirt), but that isn't warming up
+    expect(chilly({ warmth: 'hot' })).toBe(false);
+  });
+
+  test('works for cycling', () => {
+    // Feels like 22 − 4 = 18: short sleeve and shorts. Medium 10 km adds 3 to make 21: the same
+    expect(chilly({ feelsLike: 22, distance: 10, effort: 'medium' }, 'cycling')).toBe(false);
+    // Feels like 12 − 4 = 8: long sleeve + base layer, tights, gloves. Hard 25 km adds 6 to make 14: short sleeve + base layer
+    expect(chilly({ feelsLike: 12, distance: 25, effort: 'hard' }, 'cycling')).toBe(true);
   });
 });

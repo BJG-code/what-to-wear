@@ -66,6 +66,13 @@ async function withProfile(page, profile = { name: 'Bradley', warmth: 'neutral' 
   }, profile);
 }
 
+// Checks the three outfit cards: Upper body, Lower body, Accessories
+async function expectOutfit(page, [upper, lower, accessories]) {
+  await expect(page.locator('#kit-upper')).toHaveText(upper);
+  await expect(page.locator('#kit-lower')).toHaveText(lower);
+  await expect(page.locator('#kit-accessories')).toHaveText(accessories);
+}
+
 // Fills in the session: today, 07:00, 8 km, Easy (unless told otherwise)
 async function fillSession(page, { day, time = '07:00', distance = '8', duration, effort = 'Easy' } = {}) {
   if (day) await page.getByRole('radio', { name: day }).check({ force: true });
@@ -169,21 +176,20 @@ test.describe('with location allowed', () => {
     // 07:00 for 48 minutes ends nearest 08:00, so the rain counts
     await openOutfit(page, { duration: '48' });
     await expect(page.locator('#reading-rain')).toHaveText('10%');
-    await expect(page.locator('#kit')).toContainText('Waterproof jacket');
+    await expect(page.locator('#kit-upper')).toHaveText('Long sleeve + Gilet + Waterproof jacket');
 
     // 07:00 for 20 minutes is over well before 08:00
     await page.goBack();
     await page.getByRole('spinbutton', { name: 'Duration' }).fill('20');
     await page.getByRole('button', { name: 'What should I wear?' }).click();
-    await expect(page.locator('#kit li').first()).toBeVisible();
-    await expect(page.locator('#kit')).not.toContainText('Waterproof');
+    await expect(page.locator('#kit-upper')).toHaveText('Long sleeve + Gilet');
   });
 
   test('rain doesn\'t change the kit for a run', async ({ page }) => {
     await mockServices(page, { weather: hourlyForecast(() => ({ precipitation_probability: 90 })) });
     await page.goto('/');
     await openOutfit(page);
-    await expect(page.locator('#kit li')).toHaveText(['Upper bodyLong sleeve', 'Lower bodyShorts']);
+    await expectOutfit(page, ['Long sleeve', 'Shorts', 'None needed']);
   });
 
   test('gusts during the run add a gilet', async ({ page }) => {
@@ -194,7 +200,7 @@ test.describe('with location allowed', () => {
     });
     await page.goto('/');
     await openOutfit(page);
-    await expect(page.locator('#kit li')).toHaveText(['Upper bodyLong sleeve', 'Upper bodyGilet', 'Lower bodyShorts']);
+    await expectOutfit(page, ['Long sleeve + Gilet', 'Shorts', 'None needed']);
   });
 
   test('sunny, warm daytime: sun cream and sunglasses', async ({ page }) => {
@@ -203,8 +209,59 @@ test.describe('with location allowed', () => {
     });
     await page.goto('/');
     await openOutfit(page, { time: '12:00' });
-    await expect(page.locator('#kit')).toContainText('AccessoriesSun cream');
-    await expect(page.locator('#kit')).toContainText('AccessoriesSunglasses');
+    await expect(page.locator('#kit-accessories')).toHaveText('Sun cream + Sunglasses');
+  });
+
+  test('distance making the outfit lighter adds the warm-up note', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    // Easy 8 km run: 10 °C gives no headband, but feels like 8 °C alone would
+    await openOutfit(page);
+    await expect(page.locator('#notes li')).toHaveText([
+      'You\'ll start a little chilly, but you\'ll warm up as you go.',
+    ]);
+  });
+
+  test('no notes when nothing applies', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    // Easy 2 km run in daylight: no distance or effort added, dry, calm, steady
+    await openOutfit(page, { distance: '2' });
+    await expect(page.locator('#kit-upper')).toHaveText('Long sleeve');
+    await expect(page.locator('#notes')).toBeHidden();
+  });
+
+  test('rain and gusts at the start, and dark: take lights', async ({ page }) => {
+    await mockServices(page, {
+      weather: hourlyForecast(() => ({ precipitation_probability: 50, wind_gusts_10m: 40 })),
+    });
+    await page.goto('/');
+    await openOutfit(page, { time: '06:00', distance: '2' });
+    await expect(page.locator('#notes li')).toHaveText([
+      'Rain likely.', 'Gusty.', 'Dark at 06:00: take lights.',
+    ]);
+  });
+
+  test('notes about the weather changing during the session', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-28T06:00:00Z'));
+    // A 2-hour run from 16:00: rain and gusts from 17:00, dark and 4° colder by 18:00
+    await mockServices(page, {
+      weather: hourlyForecast((time) => {
+        if (time === '2026-10-28T17:00') return { precipitation_probability: 60, wind_gusts_10m: 45 };
+        if (time === '2026-10-28T18:00') return { apparent_temperature: 4.1 };
+        return {};
+      }),
+    });
+    await page.goto('/');
+    await openOutfit(page, { time: '16:00', distance: '2', duration: '120' });
+    await expect(page.locator('#notes li')).toHaveText([
+      'Rain likely from 17:00.',
+      'Gusty from 17:00.',
+      'Dark from 18:00: take lights.',
+      'About 4° colder by the end.',
+    ]);
+    // The readings still show the start
+    await expect(page.locator('#reading-rain')).toHaveText('10%');
   });
 
   test('says so plainly when the forecast doesn\'t cover the chosen time', async ({ page }) => {
@@ -263,10 +320,8 @@ test.describe('with location allowed', () => {
     await expect(page.getByRole('heading', { name: 'Your outfit' })).toBeVisible();
     await expect(page.locator('#summary')).toContainText('run');
     // Easy 8 km run, dressing for 10 °C
-    await expect(page.locator('#kit li')).toHaveText([
-      'Upper bodyLong sleeve',
-      'Lower bodyShorts',
-    ]);
+    await expectOutfit(page, ['Long sleeve', 'Shorts', 'None needed']);
+    await expect(page.locator('#kit li')).toHaveCount(3);
   });
 
   test('switching to cycling changes the kit', async ({ page }) => {
@@ -276,13 +331,7 @@ test.describe('with location allowed', () => {
     await openOutfit(page);
     await expect(page.locator('#summary')).toContainText('ride');
     // Easy 8 km ride, dressing for 5 °C after the bike chill
-    await expect(page.locator('#kit li')).toHaveText([
-      'Upper bodyLong sleeve',
-      'Upper bodyGilet',
-      'Lower bodyTights',
-      'AccessoriesBuff',
-      'AccessoriesGloves',
-    ]);
+    await expectOutfit(page, ['Long sleeve + Gilet', 'Tights', 'Buff + Gloves']);
   });
 
   test('remembers your choices next time', async ({ page }) => {
@@ -488,7 +537,7 @@ test.describe('with location allowed', () => {
     let scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
     await openOutfit(page);
-    await expect(page.locator('#kit li').first()).toBeVisible();
+    await expect(page.locator('#kit-upper')).not.toBeEmpty();
     // A long wind reading still fits
     await expect(page.locator('#reading-wind')).toBeVisible();
     scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -709,7 +758,7 @@ test.describe('with location allowed', () => {
     await openOutfit(page);
     await expect(page.locator('#plan-screen')).toBeHidden();
     await expect(page.locator('#summary')).toHaveText('Wed 28 Oct · 07:00 · Easy 8 km run');
-    await expect(page.locator('#kit li').first()).toBeVisible();
+    await expect(page.locator('#kit-upper')).not.toBeEmpty();
   });
 
   test('the back arrow returns to Plan a session, keeping your choices', async ({ page }) => {

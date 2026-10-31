@@ -1,6 +1,6 @@
 // Checks how the session's weather is picked out of the hourly forecast, without opening the page.
 const { test, expect } = require('@playwright/test');
-const { forSession, readings } = require('../weather.js');
+const { forSession, readings, notes } = require('../weather.js');
 
 // A small forecast for one morning, 06:00 to 10:00, in the shape Open-Meteo sends
 const forecast = {
@@ -118,5 +118,63 @@ test.describe('the six readings', () => {
     expect(readings(hour({ gusts: null, humidity: null, cloudCover: null, rainChance: null }))).toMatchObject({
       wind: '12 · gust –', humidity: '–', sky: '–', rain: '–',
     });
+  });
+});
+
+test.describe('notes about the weather', () => {
+  // One session, built from a list of hours. Each hour is daylight, dry, calm and 8 °C feels like, unless changed.
+  function session(changes) {
+    const hours = changes.map((change, i) => ({
+      time: `0${7 + i}:00`, temperature: 10, feelsLike: 8, windSpeed: 10, gusts: 20,
+      rainChance: 10, cloudCover: 80, isDay: true, humidity: 80, ...change,
+    }));
+    return { start: hours[0], hours };
+  }
+  const texts = (hours, startTime = '07:00') => notes(session(hours), startTime).map((n) => n.text);
+
+  test('nothing to say on a dry, calm, light, steady session', () => {
+    expect(texts([{}, {}, {}])).toEqual([]);
+  });
+
+  test('rain likely at 50% or more, not 49%', () => {
+    expect(texts([{ rainChance: 50 }])).toEqual(['Rain likely.']);
+    expect(texts([{ rainChance: 49 }])).toEqual([]);
+  });
+
+  test('gusty at 40 km/h or more, not 39', () => {
+    expect(texts([{ gusts: 40 }])).toEqual(['Gusty.']);
+    expect(texts([{ gusts: 39 }])).toEqual([]);
+  });
+
+  test('dark at the start says take lights, with your start time', () => {
+    expect(notes(session([{ isDay: false }]), '06:40')).toEqual([
+      { kind: 'dark', text: 'Dark at 06:40: take lights.' },
+    ]);
+  });
+
+  test('says when rain, gusts or dark start later in the session', () => {
+    expect(texts([{}, { rainChance: 60 }, { rainChance: 80, gusts: 45, isDay: false }])).toEqual([
+      'Rain likely from 08:00.', 'Gusty from 09:00.', 'Dark from 09:00: take lights.',
+    ]);
+  });
+
+  test('already true at the start: said once, without a time', () => {
+    expect(texts([{ rainChance: 60 }, { rainChance: 90 }])).toEqual(['Rain likely.']);
+  });
+
+  test('getting light during the session still needs lights at the start', () => {
+    expect(texts([{ isDay: false }, {}])).toEqual(['Dark at 07:00: take lights.']);
+  });
+
+  test('feels like changing by 3 °C or more by the end', () => {
+    expect(texts([{}, {}, { feelsLike: 4.2 }])).toEqual(['About 4° colder by the end.']);
+    expect(texts([{}, { feelsLike: 2 }, { feelsLike: 11 }])).toEqual(['About 3° warmer by the end.']);
+    // 2.9 °C isn't enough, and only the end counts, not a dip in the middle
+    expect(texts([{}, {}, { feelsLike: 5.1 }])).toEqual([]);
+    expect(texts([{}, { feelsLike: 0 }, {}])).toEqual([]);
+  });
+
+  test('gaps in the forecast are ignored', () => {
+    expect(texts([{ rainChance: null, gusts: null }, { rainChance: null, gusts: null, feelsLike: null }])).toEqual([]);
   });
 });

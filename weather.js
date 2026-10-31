@@ -12,6 +12,11 @@
 
   const HOUR = 60 * 60 * 1000;
 
+  // Notes: rain chance (%) and gusts (km/h) worth a mention, and how much feels like (°C) must change
+  const RAIN_NOTE = 50;
+  const GUST_NOTE = 40;
+  const FEELS_CHANGE = 3;
+
   // Turns "2026-10-28T07:00" into a number we can compare and add minutes to.
   // Both the forecast and your chosen time are clock times at the place, so time zones don't matter here.
   function clockTime(text) {
@@ -91,7 +96,47 @@
     };
   }
 
-  const api = { HOURLY_FIELDS, SUNNY_CLOUD, forSession, readings };
+  // Short notes about the weather, shown below the outfit only when they apply.
+  // session: from forSession. startTime: your start time as text, e.g. "07:00".
+  // Returns a list of { kind, text }, where kind is "rain", "wind", "dark" or "temperature".
+  // Something true at the start is said plainly ("Rain likely."); something that starts later in
+  // the session says when ("Rain likely from 08:00.").
+  function notes(session, startTime) {
+    const { start, hours } = session;
+    const later = hours.slice(1);
+    const list = [];
+
+    // From the first hour that matches, or null if none do
+    const firstLater = (matches) => {
+      const hour = later.find(matches);
+      return hour ? hour.time : null;
+    };
+
+    const rainy = (hour) => hour.rainChance !== null && hour.rainChance >= RAIN_NOTE;
+    if (rainy(start)) list.push({ kind: 'rain', text: 'Rain likely.' });
+    else if (firstLater(rainy)) list.push({ kind: 'rain', text: `Rain likely from ${firstLater(rainy)}.` });
+
+    const gusty = (hour) => hour.gusts !== null && hour.gusts >= GUST_NOTE;
+    if (gusty(start)) list.push({ kind: 'wind', text: 'Gusty.' });
+    else if (firstLater(gusty)) list.push({ kind: 'wind', text: `Gusty from ${firstLater(gusty)}.` });
+
+    const dark = (hour) => !hour.isDay;
+    if (dark(start)) list.push({ kind: 'dark', text: `Dark at ${startTime}: take lights.` });
+    else if (firstLater(dark)) list.push({ kind: 'dark', text: `Dark from ${firstLater(dark)}: take lights.` });
+
+    // Feels like at the end compared with the start
+    const end = hours[hours.length - 1];
+    if (end.feelsLike !== null && start.feelsLike !== null) {
+      const change = end.feelsLike - start.feelsLike;
+      if (Math.abs(change) >= FEELS_CHANGE) {
+        const word = change < 0 ? 'colder' : 'warmer';
+        list.push({ kind: 'temperature', text: `About ${Math.round(Math.abs(change))}° ${word} by the end.` });
+      }
+    }
+    return list;
+  }
+
+  const api = { HOURLY_FIELDS, SUNNY_CLOUD, forSession, readings, notes };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else {
