@@ -82,14 +82,14 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 ## Design
 
 - [x] 37. Colours are close but not exact: cards #18181F (should be #18181D), borders #2A2A35 (#26262D), text #ECECF1 (#F4F4F6), secondary text #9A9AA8 (#A6A6B0), accent text #A78BFA (#C4A7FF); hover #6D28D9 and selected tint #231B36 aren't used.
-- [ ] 38. Some buttons are smaller than 44 px to tap (e.g. "Change", the choice buttons).
+- [x] 38. Some buttons are smaller than 44 px to tap (e.g. "Change", the choice buttons). Done 31 Oct 2026: Change, Search, the town search box, "Use my current location" and the distance and duration boxes are now all at least 44 px.
 - [x] 39. Font order is Carlito then Calibri; the spec says Calibri first, Carlito as the fallback.
 
 ## Home screen and housekeeping
 
-- [ ] 40. No home-screen icon, so "Add to Home Screen" won't show the app's own icon.
-- [ ] 41. README and ROADMAP describe the old version and contradict the spec.
-- [ ] 42. The automated checks test the old rules and layout; they'll be rewritten gap by gap as each one is fixed.
+- [x] 40. No home-screen icon, so "Add to Home Screen" won't show the app's own icon.
+- [x] 41. README and ROADMAP describe the old version and contradict the spec.
+- [x] 42. The automated checks test the old rules and layout; they'll be rewritten gap by gap as each one is fixed. Done 31 Oct 2026: rewritten across sessions 1 to 11.
 
 ## Open questions
 

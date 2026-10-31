@@ -900,6 +900,12 @@
       // Emptying the box hands the duration back to the distance next time it changes
       durationTyped = el('duration').value !== '';
     });
+    // Tapping anywhere in the distance or duration box (even on "km" or "min") puts the cursor in it
+    for (const box of document.querySelectorAll('.unit-input')) {
+      box.addEventListener('click', (event) => {
+        if (event.target.tagName !== 'INPUT') box.querySelector('input').focus();
+      });
+    }
     el('plan-screen').addEventListener('input', clearFixedErrors);
     el('plan-screen').addEventListener('change', clearFixedErrors);
 
