@@ -618,21 +618,62 @@
       outline: none;
     }
 
+    /* Three outfit cards: Upper body, Lower body, Accessories */
     #kit {
       list-style: none;
-      border-top: 1px solid var(--border);
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
     }
 
     #kit li {
       display: flex;
+      align-items: center;
       gap: 16px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 14px 16px;
+    }
+
+    .kit-icon {
+      flex: 0 0 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--selected-tint);
+      color: var(--purple-light);
     }
 
     #kit .area {
-      flex: 0 0 56px;
+      display: block;
       color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    #kit strong {
+      display: block;
+      font-size: 1.3rem;
+      overflow-wrap: anywhere;
+    }
+
+    /* Notes below the cards, each with a small icon */
+    #notes {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    #notes li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    #notes svg {
+      flex: 0 0 22px;
+      color: var(--purple-light);
     }
 
     #status {
@@ -814,7 +855,12 @@
         </div>
         <p id="place-note" hidden></p>
         <h2 id="kit-heading" tabindex="-1">Your outfit</h2>
-        <ul id="kit"></ul>
+        <ul id="kit" aria-label="What to wear">
+          <li><span class="kit-icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l-5 3 2 5 3-1.5V21h8V9.5L19 11l2-5-5-3c-.5 1.7-2 2.5-4 2.5S8.5 4.7 8 3z"/></svg></span><span><span class="area">Upper body</span><strong id="kit-upper"></strong></span></li>
+          <li><span class="kit-icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14l1 14h-6l-2-7-2 7H4z"/><path d="M5 8h14"/></svg></span><span><span class="area">Lower body</span><strong id="kit-lower"></strong></span></li>
+          <li><span class="kit-icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16a8 8 0 0 1 16 0z"/><path d="M3 16h18v3H3z"/></svg></span><span><span class="area">Accessories</span><strong id="kit-accessories"></strong></span></li>
+        </ul>
+        <ul id="notes" aria-label="Notes" hidden></ul>
       </section>
     </div>
 

@@ -120,7 +120,17 @@
     return { items };
   }
 
-  const api = { recommend, dressingTemperature };
+  // True when distance or effort has made the outfit lighter than the weather alone would:
+  // you'll start a little chilly, but warm up as you go.
+  // dressing: from dressingTemperature. weather: as for recommend.
+  function startsChilly({ activity, dressing, weather }) {
+    if (dressing.effort + dressing.distance <= 0) return false;
+    const without = Math.round(dressing.exact - dressing.effort - dressing.distance) || 0;
+    const outfit = (t) => JSON.stringify(recommend({ activity, dressingTemp: t, weather }).items);
+    return outfit(without) !== outfit(dressing.total);
+  }
+
+  const api = { recommend, dressingTemperature, startsChilly };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else {
