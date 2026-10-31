@@ -871,3 +871,209 @@ test.describe('with location blocked', () => {
     expect(requests[0].searchParams.get('latitude')).toBe('51.5');
   });
 });
+
+test.describe('feedback', () => {
+  test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
+  test.beforeEach(async ({ page }) => {
+    await withProfile(page);
+  });
+
+  // Sets the phone's clock, e.g. '2026-11-02T09:00'
+  async function setClock(page, time) {
+    await page.clock.install({ time: new Date(`${time}:00Z`) });
+  }
+
+  // What's saved on the phone
+  async function saved(page) {
+    return page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')));
+  }
+
+  const buttons = (page) => page.locator('#feedback-buttons');
+
+  test('not asked before the session has finished, and says when it will be', async ({ page }) => {
+    // 8 km at 07:00 takes 48 minutes, so it finishes at 07:48
+    await setClock(page, '2026-11-02T07:30');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await expect(page.locator('#kit-upper')).not.toBeEmpty();
+    await expect(page.getByRole('heading', { name: 'How did the outfit feel?' })).toBeVisible();
+    await expect(page.locator('#feedback-wait')).toHaveText('You can rate it once you\'ve finished, from 07:48.');
+    await expect(buttons(page)).toBeHidden();
+  });
+
+  test('a session on a later day says which day', async ({ page }) => {
+    await setClock(page, '2026-11-02T07:30');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { day: 'Wednesday 4 November', time: '18:00' });
+    await expect(page.locator('#feedback-wait')).toHaveText('You can rate it once you\'ve finished, from Wed 4 Nov, 18:48.');
+  });
+
+  test('the buttons appear once the session finishes, if the outfit is left open', async ({ page }) => {
+    await setClock(page, '2026-11-02T07:40');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await expect(page.locator('#feedback-wait')).toBeVisible();
+    await page.clock.fastForward('10:00');
+    await expect(buttons(page)).toBeVisible();
+    await expect(page.locator('#feedback-wait')).toBeHidden();
+  });
+
+  test('asked once finished: Too hot, Perfect, Too cold, big enough to tap', async ({ page }) => {
+    await setClock(page, '2026-11-02T09:00');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await expect(buttons(page).getByRole('button')).toHaveText(['Too hot', 'Perfect', 'Too cold']);
+    for (const button of await buttons(page).getByRole('button').all()) {
+      const box = await button.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    // Ends exactly at 07:48 counts as finished
+    await page.goBack();
+    await openOutfit(page, { time: '08:12' });
+    await expect(buttons(page)).toBeVisible();
+    await page.goBack();
+    await openOutfit(page, { time: '08:13' });
+    await expect(buttons(page)).toBeHidden();
+  });
+
+  test('Too hot moves the running offset +0.5 °C, saved with the forecast and session', async ({ page }) => {
+    await setClock(page, '2026-11-02T09:00');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00', effort: 'Medium' });
+    await page.getByRole('button', { name: 'Too hot' }).click();
+    await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! Future runs will dress you 0.5° lighter.');
+    await expect(buttons(page)).toBeHidden();
+    const data = await saved(page);
+    expect(data.offsets).toEqual({ running: 0.5, cycling: 0 });
+    expect(data.ratings).toHaveLength(1);
+    const r = data.ratings[0];
+    expect(r).toMatchObject({
+      rating: 'hot', activity: 'running', start: '2026-11-02T07:00', distance: 8, duration: 48,
+      effort: 'medium', warmth: 'neutral', dressingTemp: 12, learnedBefore: 0, learnedAfter: 0.5,
+    });
+    expect(r.forecast.start).toMatchObject({ time: '07:00', temperature: 10.2, feelsLike: 8.1, humidity: 82 });
+    expect(r.forecast.hours.length).toBeGreaterThan(0);
+  });
+
+  test('the next outfit uses the learned offset, and shows it', async ({ page }) => {
+    await setClock(page, '2026-11-02T09:00');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    // Feels like 8 + 2 for 8 km = 10
+    await expect(page.locator('#dressing-temp')).toHaveText('10°C');
+    await page.getByRole('button', { name: 'Too hot' }).click();
+    // The outfit you rated stays as it was
+    await expect(page.locator('#dressing-temp')).toHaveText('10°C');
+    await page.goBack();
+    await openOutfit(page, { time: '12:00' });
+    // 10.1 + 0.5 = 10.6, rounded to 11
+    await expect(page.locator('#dressing-temp')).toHaveText('11°C');
+    await expect(page.locator('#dressing-parts li').last()).toHaveText('Learned +0.5°');
+  });
+
+  test('Too cold moves it −0.5 °C, Perfect leaves it, and running and cycling are separate', async ({ page }) => {
+    await setClock(page, '2026-11-02T20:00');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await page.getByRole('button', { name: 'Too cold' }).click();
+    await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! Future runs will dress you 0.5° warmer.');
+    await page.goBack();
+    await openOutfit(page, { time: '09:00' });
+    await page.getByRole('button', { name: 'Perfect' }).click();
+    await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! Your runs will keep dressing you the same way.');
+    await page.goBack();
+    await page.locator('label').filter({ hasText: 'Cycling' }).click();
+    await openOutfit(page, { time: '11:00' });
+    await page.getByRole('button', { name: 'Too hot' }).click();
+    await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! Future rides will dress you 0.5° lighter.');
+    const data = await saved(page);
+    expect(data.offsets).toEqual({ running: -0.5, cycling: 0.5 });
+    expect(data.ratings.map((r) => r.rating)).toEqual(['cold', 'perfect', 'hot']);
+  });
+
+  test('stops at +5 °C and says so', async ({ page }) => {
+    await page.addInitScript(() => {
+      const data = JSON.parse(localStorage.getItem('what-to-wear'));
+      if (!data.offsets) localStorage.setItem('what-to-wear', JSON.stringify({ ...data, offsets: { running: 5, cycling: 0 } }));
+    });
+    await setClock(page, '2026-11-02T09:00');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await expect(page.locator('#dressing-parts li').last()).toHaveText('Learned +5°');
+    await page.getByRole('button', { name: 'Too hot' }).click();
+    await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! That\'s saved, but your runs are already as far as it goes (+5°).');
+    expect((await saved(page)).offsets.running).toBe(5);
+  });
+
+  test('each session is rated only once', async ({ page }) => {
+    await setClock(page, '2026-11-02T09:00');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await page.getByRole('button', { name: 'Too hot' }).click();
+    await page.goBack();
+    await openOutfit(page, { time: '07:00' });
+    await expect(page.locator('#feedback-thanks')).toHaveText('You rated this outfit Too hot.');
+    await expect(buttons(page)).toBeHidden();
+    expect((await saved(page)).ratings).toHaveLength(1);
+  });
+
+  test('after the session, Plan a session asks how it went, and reopens the outfit to rate', async ({ page }) => {
+    await setClock(page, '2026-11-02T06:30');
+    const requests = await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await expect(page.locator('#kit-upper')).toHaveText('Long sleeve');
+    await page.goBack();
+    // Not finished yet, so not asked
+    await expect(page.locator('#last-session')).toBeHidden();
+
+    // Later, the app is opened again
+    await page.clock.setSystemTime(new Date('2026-11-02T08:30:00Z'));
+    await page.reload();
+    await expect(page.locator('#last-session')).toBeVisible();
+    await expect(page.locator('#last-session-text')).toHaveText('How did the outfit feel for your run? Mon 2 Nov · 07:00 · Easy 8 km run');
+    await page.getByRole('button', { name: 'Rate it' }).click();
+    await expect(page.locator('#summary')).toHaveText('Mon 2 Nov · 07:00 · Easy 8 km run');
+    // The same outfit, from the forecast you dressed for, without asking for the weather again
+    await expect(page.locator('#kit-upper')).toHaveText('Long sleeve');
+    expect(requests).toHaveLength(1);
+    await page.getByRole('button', { name: 'Perfect' }).click();
+    await page.goBack();
+    await expect(page.locator('#last-session')).toBeHidden();
+  });
+
+  test('"Not now" stops asking about that session', async ({ page }) => {
+    await setClock(page, '2026-11-02T06:30');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await page.goBack();
+    await page.clock.setSystemTime(new Date('2026-11-02T08:30:00Z'));
+    await page.reload();
+    await page.getByRole('button', { name: 'Not now' }).click();
+    await expect(page.locator('#last-session')).toBeHidden();
+    await page.reload();
+    await expect(page.locator('#last-session')).toBeHidden();
+    expect((await saved(page)).ratings || []).toHaveLength(0);
+  });
+
+  test('sessions finished more than 3 days ago aren\'t asked about', async ({ page }) => {
+    await setClock(page, '2026-11-02T06:30');
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await page.goBack();
+    await page.clock.setSystemTime(new Date('2026-11-06T08:00:00Z'));
+    await page.reload();
+    await expect(page.locator('#last-session')).toBeHidden();
+  });
+});

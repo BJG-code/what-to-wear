@@ -1,6 +1,6 @@
 // Checks the rules that decide what to wear, without opening the page.
 const { test, expect } = require('@playwright/test');
-const { recommend, dressingTemperature, startsChilly } = require('../clothing.js');
+const { recommend, dressingTemperature, startsChilly, learnFrom } = require('../clothing.js');
 
 // Daylight, cool, grey, calm and dry: nothing extra from the weather
 const calm = { temperature: 10, cloudCover: 80, isDay: true, gusts: 20, rainChance: 0 };
@@ -285,5 +285,55 @@ test.describe('"You\'ll start a little chilly" note', () => {
     expect(chilly({ feelsLike: 22, distance: 10, effort: 'medium' }, 'cycling')).toBe(false);
     // Feels like 12 − 4 = 8: long sleeve + base layer, tights, gloves. Hard 25 km adds 6 to make 14: short sleeve + base layer
     expect(chilly({ feelsLike: 12, distance: 25, effort: 'hard' }, 'cycling')).toBe(true);
+  });
+});
+
+test.describe('learning from feedback', () => {
+  test('too hot moves the offset up by 0.5 °C, so future outfits are lighter', () => {
+    expect(learnFrom(0, 'hot')).toBe(0.5);
+    expect(learnFrom(1.5, 'hot')).toBe(2);
+  });
+
+  test('too cold moves the offset down by 0.5 °C, so future outfits are warmer', () => {
+    expect(learnFrom(0, 'cold')).toBe(-0.5);
+    expect(learnFrom(-1, 'cold')).toBe(-1.5);
+  });
+
+  test('perfect leaves the offset alone', () => {
+    expect(learnFrom(0, 'perfect')).toBe(0);
+    expect(learnFrom(2.5, 'perfect')).toBe(2.5);
+  });
+
+  test('capped at +5 °C and −5 °C', () => {
+    expect(learnFrom(4.5, 'hot')).toBe(5);
+    expect(learnFrom(5, 'hot')).toBe(5);
+    expect(learnFrom(-4.5, 'cold')).toBe(-5);
+    expect(learnFrom(-5, 'cold')).toBe(-5);
+    // Coming back from the cap works straight away
+    expect(learnFrom(5, 'cold')).toBe(4.5);
+    expect(learnFrom(-5, 'hot')).toBe(-4.5);
+  });
+
+  test('back to exactly 0, not −0', () => {
+    expect(Object.is(learnFrom(0.5, 'cold'), 0)).toBe(true);
+  });
+
+  test('a missing or broken offset starts from 0', () => {
+    expect(learnFrom(undefined, 'hot')).toBe(0.5);
+    expect(learnFrom('nonsense', 'cold')).toBe(-0.5);
+  });
+
+  test('twenty ratings one way stop at the cap, and stay whole halves', () => {
+    let offset = 0;
+    for (let i = 0; i < 20; i++) offset = learnFrom(offset, 'hot');
+    expect(offset).toBe(5);
+    for (let i = 0; i < 3; i++) offset = learnFrom(offset, 'cold');
+    expect(offset).toBe(3.5);
+  });
+
+  test('the learned offset changes the outfit: 7 °C is tights, +0.5 makes 7.5, rounded to 8: shorts', () => {
+    const feels7 = { feelsLike: 7, distance: 2 };
+    expect(wear('running', dressing({ ...feels7, learnedOffset: 0 }).total)).toContain('Tights');
+    expect(wear('running', dressing({ ...feels7, learnedOffset: learnFrom(0, 'hot') }).total)).toContain('Shorts');
   });
 });

@@ -676,6 +676,61 @@
       color: var(--purple-light);
     }
 
+    /* How did the outfit feel? Three buttons side by side */
+    #feedback {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .feedback-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .feedback-button {
+      min-height: 48px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .feedback-button:hover {
+      background: var(--selected-tint);
+      border-color: var(--purple);
+    }
+
+    .feedback-button:focus-visible {
+      outline: 2px solid var(--purple-light);
+      outline-offset: 2px;
+    }
+
+    #feedback-thanks {
+      color: var(--purple-light);
+    }
+
+    /* "How did the outfit feel for your run?" on Plan a session */
+    .last-session {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .last-session-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .last-session-buttons button {
+      flex: 1;
+      min-height: 44px;
+    }
+
     #status {
       color: var(--muted);
     }
@@ -747,6 +802,15 @@
         </div>
         <h2 class="screen-title">Plan a session</h2>
       </div>
+
+      <!-- Your last session, once it has finished, if you haven't rated it yet -->
+      <section id="last-session" class="last-session" aria-label="Your last session" hidden>
+        <p id="last-session-text"></p>
+        <div class="last-session-buttons">
+          <button type="button" class="primary-button" id="rate-last">Rate it</button>
+          <button type="button" class="button" id="skip-last">Not now</button>
+        </div>
+      </section>
 
       <fieldset>
         <legend class="label">Activity</legend>
@@ -861,6 +925,18 @@
           <li><span class="kit-icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16a8 8 0 0 1 16 0z"/><path d="M3 16h18v3H3z"/></svg></span><span><span class="area">Accessories</span><strong id="kit-accessories"></strong></span></li>
         </ul>
         <ul id="notes" aria-label="Notes" hidden></ul>
+
+        <!-- Asked once the session has finished (start + duration) -->
+        <section id="feedback" aria-labelledby="feedback-heading" hidden>
+          <h2 id="feedback-heading">How did the outfit feel?</h2>
+          <p id="feedback-wait" class="hint" hidden></p>
+          <div id="feedback-buttons" class="feedback-buttons" hidden>
+            <button type="button" class="feedback-button" id="rate-hot">Too hot</button>
+            <button type="button" class="feedback-button" id="rate-perfect">Perfect</button>
+            <button type="button" class="feedback-button" id="rate-cold">Too cold</button>
+          </div>
+          <p id="feedback-thanks" role="status" tabindex="-1" hidden></p>
+        </section>
       </section>
     </div>
 
