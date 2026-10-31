@@ -41,7 +41,7 @@ test.describe('with location allowed', () => {
     await mockServices(page);
     await page.goto('/');
     await expect(page).toHaveTitle('What to wear');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('What to wear');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('What to wear');
   });
 
   test('uses your current location and shows the weather', async ({ page }) => {
@@ -135,11 +135,36 @@ test.describe('with location allowed', () => {
     await expect(page.locator('#results')).toBeHidden();
   });
 
-  test('colours are right', async ({ page }) => {
+  test('shows the logo and tagline', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const logo = page.getByRole('img', { name: 'What to wear' });
+    await expect(logo).toBeVisible();
+    // The picture really loaded, not just an empty box
+    await expect.poll(() => logo.evaluate((img) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
+    await expect(page.getByText('Whatever the weather, get it right')).toBeVisible();
+  });
+
+  test('colours match the design', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
     await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(14, 14, 18)'); // #0E0E12
-    await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('color', 'rgb(124, 58, 237)'); // #7C3AED
+    await expect(page.locator('body')).toHaveCSS('color', 'rgb(244, 244, 246)'); // text #F4F4F6
+    await expect(page.locator('.tagline')).toHaveCSS('color', 'rgb(166, 166, 176)'); // secondary #A6A6B0
+    const change = page.getByRole('button', { name: 'Change' });
+    await expect(change).toHaveCSS('color', 'rgb(196, 167, 255)'); // accent text #C4A7FF
+    await expect(page.locator('input[value="running"] + span')).toHaveCSS('background-color', 'rgb(124, 58, 237)'); // selected #7C3AED
+    await change.click();
+    const box = page.getByRole('searchbox', { name: 'Town or city' });
+    await expect(box).toHaveCSS('background-color', 'rgb(24, 24, 29)'); // inputs #18181D
+    await expect(box).toHaveCSS('border-top-color', 'rgb(38, 38, 45)'); // borders #26262D
+  });
+
+  test('uses Calibri first, with Carlito as the fallback', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const fonts = await page.locator('body').evaluate((el) => getComputedStyle(el).fontFamily);
+    expect(fonts.replace(/"/g, '')).toBe('Calibri, Carlito, sans-serif');
   });
 
   test('Carlito font is loaded', async ({ page }) => {

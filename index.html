@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="What to wear">
   <title>What to wear</title>
 
-  <!-- Load the Carlito font from Google Fonts -->
+  <!-- Load Carlito from Google Fonts: the free fallback for Calibri, same shape -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap" rel="stylesheet">
@@ -19,12 +19,14 @@
   <style>
     :root {
       --background: #0E0E12;
-      --surface: #18181F;
-      --border: #2A2A35;
+      --surface: #18181D;
+      --border: #26262D;
       --purple: #7C3AED;
-      --purple-light: #A78BFA;
-      --text: #ECECF1;
-      --muted: #9A9AA8;
+      --purple-hover: #6D28D9;
+      --purple-light: #C4A7FF; /* accent text and icons on dark */
+      --selected-tint: #231B36;
+      --text: #F4F4F6;
+      --muted: #A6A6B0;
     }
 
     * {
@@ -44,7 +46,8 @@
       padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
                max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
       background-color: var(--background);
-      font-family: "Carlito", Calibri, sans-serif;
+      /* Calibri first; Carlito when the phone doesn't have Calibri */
+      font-family: Calibri, "Carlito", sans-serif;
       font-size: 18px;
       line-height: 1.4;
       color: var(--text);
@@ -61,11 +64,22 @@
       gap: 24px;
     }
 
-    h1 {
-      font-size: 2.25rem;
-      font-weight: 700;
-      line-height: 1.1;
-      color: var(--purple);
+    /* Logo and tagline at the top */
+    .logo h1 {
+      line-height: 0;
+    }
+
+    .logo img {
+      width: 240px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+
+    .tagline {
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-top: 4px;
     }
 
     h2 {
@@ -94,6 +108,10 @@
       padding: 6px 12px;
       color: var(--purple-light);
       cursor: pointer;
+    }
+
+    .button:hover {
+      background: var(--selected-tint);
     }
 
     /* Where you are */
@@ -198,6 +216,14 @@
       font-weight: 700;
     }
 
+    .choices label:hover input:not(:checked) + span {
+      background: var(--selected-tint);
+    }
+
+    .choices label:hover input:checked + span {
+      background: var(--purple-hover);
+    }
+
     .choices input:focus-visible + span {
       outline: 2px solid var(--purple-light);
       outline-offset: -2px;
@@ -256,7 +282,10 @@
 </head>
 <body>
   <main>
-    <h1>What to wear</h1>
+    <header class="logo">
+      <h1><img src="assets/logo.png" alt="What to wear" width="1438" height="246"></h1>
+      <p class="tagline">Whatever the weather, get it right</p>
+    </header>
 
     <section aria-label="Location">
       <span class="label">Weather for</span>
