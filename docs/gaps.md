@@ -93,4 +93,4 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 ## Open question
 
-- Thresholds are whole numbers (6 to 10, 5 or below), so 10.5 °C has no clear answer. Suggestion: round the dressing temperature to the nearest whole degree. To agree when building the outfit rules.
+- [x] Thresholds are whole numbers (6 to 10, 5 or below), so 10.5 °C has no clear answer. Decided 31 Oct 2026: round the dressing temperature to the nearest whole degree (halves round up), and use that rounded number for the outfit. Added to the spec.

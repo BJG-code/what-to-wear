@@ -20,7 +20,7 @@ function dressing(change = {}) {
 test.describe('dressing temperature', () => {
   test('worked example: easy 8 km run, feels like 6 °C, neutral → 8 °C', () => {
     const d = dressing({ feelsLike: 6, distance: 8 });
-    expect(d).toEqual({ feelsLike: 6, effort: 0, distance: 2, profile: 0, learned: 0, chill: 0, total: 8 });
+    expect(d).toEqual({ feelsLike: 6, effort: 0, distance: 2, profile: 0, learned: 0, chill: 0, exact: 8, total: 8 });
   });
 
   test('effort: easy +0, medium +2, hard +4', () => {
@@ -55,8 +55,26 @@ test.describe('dressing temperature', () => {
 
   test('learned offset is added, and starts at 0', () => {
     expect(dressing().learned).toBe(0);
-    expect(dressing({ learnedOffset: 1.5 }).total).toBe(11.5);
+    expect(dressing({ learnedOffset: 1.5 }).exact).toBe(11.5);
     expect(dressing({ learnedOffset: -2 }).total).toBe(8);
+  });
+
+  test('rounded to the nearest whole degree, halves round up', () => {
+    expect(dressing({ feelsLike: 7.4 }).total).toBe(7);
+    expect(dressing({ feelsLike: 7.5 }).total).toBe(8);
+    expect(dressing({ feelsLike: 7.6 }).total).toBe(8);
+    expect(dressing({ learnedOffset: 0.5 }).total).toBe(11);
+    expect(dressing({ feelsLike: -3.4 }).total).toBe(-3);
+    expect(dressing({ feelsLike: -3.6 }).total).toBe(-4);
+    // Just below zero shows as 0, not −0
+    expect(Object.is(dressing({ feelsLike: -0.4 }).total, 0)).toBe(true);
+  });
+
+  test('the outfit uses the rounded number, so 7.6 is dressed as 8', () => {
+    // 8 °C is the edge of a long-sleeve top in today's running rules
+    const kit = (feelsLike) => wear('running', dressing({ feelsLike }).total);
+    expect(kit(7.6)).toContain('Long-sleeve top');
+    expect(kit(7.4)).toContain('Long-sleeve thermal top');
   });
 
   test('cycling takes off 4 °C for chill, running takes off nothing', () => {

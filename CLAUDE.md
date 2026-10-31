@@ -69,6 +69,8 @@ One call to Open-Meteo's hourly forecast for the phone's GPS position (free, no 
 | Learned offset | Starts at 0, moved by feedback, separate for running and cycling |
 | Cycling chill | 4 °C when cycling, 0 when running |
 
+The result is rounded to the nearest whole degree (halves round up), and the outfit rules use that rounded number.
+
 Duration does not change the dressing temperature.
 
 ## Outfit rules

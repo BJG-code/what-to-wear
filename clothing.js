@@ -41,8 +41,11 @@
       learned: learnedOffset,
       chill: activity === 'cycling' ? CYCLING_CHILL : 0,
     };
-    const total = parts.feelsLike + parts.effort + parts.distance + parts.profile + parts.learned - parts.chill;
-    return { ...parts, total };
+    const exact = parts.feelsLike + parts.effort + parts.distance + parts.profile + parts.learned - parts.chill;
+    // Rounded to the nearest whole degree (halves round up), so the outfit always matches the number on screen.
+    // "|| 0" turns −0 into 0.
+    const total = Math.round(exact) || 0;
+    return { ...parts, exact, total };
   }
 
   function runningKit(t) {
