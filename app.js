@@ -260,6 +260,15 @@
       input.checked = input.value === warmth;
     }
     el('profile-screen').addEventListener('submit', saveProfile);
+    // Until Settings exists, "Change your details" reopens Getting to know you with your answers filled in
+    el('edit-profile').addEventListener('click', () => {
+      el('name').value = state.profile ? state.profile.name : '';
+      for (const input of document.querySelectorAll('input[name="warmth"]')) {
+        input.checked = input.value === (state.profile ? state.profile.warmth : 'neutral');
+      }
+      showScreen('profile');
+      el('name').focus();
+    });
     el('name').addEventListener('input', () => {
       if (el('name').value.trim()) {
         el('name-error').hidden = true;

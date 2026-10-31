@@ -165,6 +165,38 @@ test.describe('with location allowed', () => {
     expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
   });
 
+  test('first launch: the name box doesn\'t autocorrect your name', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const name = page.getByRole('textbox', { name: 'Your name' });
+    await expect(name).toHaveAttribute('autocorrect', 'off');
+    await expect(name).toHaveAttribute('spellcheck', 'false');
+  });
+
+  test('"Change your details" lets you fix your name and run hot or cold', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await expect(page.locator('#greeting')).toHaveText('Hello Bradley');
+    const change = page.getByRole('button', { name: 'Change your details' });
+    expect((await change.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await change.click();
+
+    // Opens Getting to know you with your current answers filled in
+    const name = page.getByRole('textbox', { name: 'Your name' });
+    await expect(name).toHaveValue('Bradley');
+    await expect(page.getByRole('radio', { name: 'Neutral' })).toBeChecked();
+
+    await name.fill('Brad');
+    await page.getByText('Runs hot', { exact: true }).click();
+    await page.getByRole('button', { name: 'Let\'s go' }).click();
+    await expect(page.locator('#greeting')).toHaveText('Hello Brad');
+
+    await page.reload();
+    await expect(page.locator('#greeting')).toHaveText('Hello Brad');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')).profile);
+    expect(saved).toEqual({ name: 'Brad', warmth: 'hot' });
+  });
+
   test('first launch: a choice saved by the old version is ticked for you', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('what-to-wear', JSON.stringify({ activity: 'running', preference: 'warm' }));
@@ -180,7 +212,7 @@ test.describe('with location allowed', () => {
     await page.goto('/');
     await expect.poll(() => requests.length).toBe(1);
 
-    await page.getByRole('button', { name: 'Change' }).click();
+    await page.getByRole('button', { name: 'Change', exact: true }).click();
     await page.getByRole('searchbox', { name: 'Town or city' }).fill('Malaga');
     await page.getByRole('button', { name: 'Search' }).click();
     await page.getByRole('button', { name: 'Málaga, Andalusia, Spain' }).click();
@@ -192,7 +224,7 @@ test.describe('with location allowed', () => {
     await page.reload();
     await expect(page.locator('#location-name')).toHaveText('Málaga, Andalusia, Spain');
 
-    await page.getByRole('button', { name: 'Change' }).click();
+    await page.getByRole('button', { name: 'Change', exact: true }).click();
     await page.getByRole('button', { name: 'Use my current location' }).click();
     await expect(page.locator('#location-name')).toHaveText('Your current location');
     await expect.poll(() => requests.at(-1).searchParams.get('latitude')).toBe('51.5');
@@ -201,7 +233,7 @@ test.describe('with location allowed', () => {
   test('tells you when a place can\'t be found', async ({ page }) => {
     await mockServices(page, { places: {} });
     await page.goto('/');
-    await page.getByRole('button', { name: 'Change' }).click();
+    await page.getByRole('button', { name: 'Change', exact: true }).click();
     await page.getByRole('searchbox', { name: 'Town or city' }).fill('Nowhereville');
     await page.getByRole('button', { name: 'Search' }).click();
     await expect(page.locator('#status')).toHaveText(
@@ -235,7 +267,7 @@ test.describe('with location allowed', () => {
     await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(14, 14, 18)'); // #0E0E12
     await expect(page.locator('body')).toHaveCSS('color', 'rgb(244, 244, 246)'); // text #F4F4F6
     await expect(page.locator('.tagline')).toHaveCSS('color', 'rgb(166, 166, 176)'); // secondary #A6A6B0
-    const change = page.getByRole('button', { name: 'Change' });
+    const change = page.getByRole('button', { name: 'Change', exact: true });
     await expect(change).toHaveCSS('color', 'rgb(196, 167, 255)'); // accent text #C4A7FF
     await expect(page.locator('input[value="running"] + span')).toHaveCSS('background-color', 'rgb(124, 58, 237)'); // selected #7C3AED
     await change.click();
