@@ -12,6 +12,7 @@
 - Sun cream and sunglasses added to the Accessories card.
 - Feedback is three buttons: Too hot / Perfect / Too cold. "Way off" is removed.
 - You can search for a town instead of using your location, e.g. to plan a session somewhere you aren't yet. The town you pick is remembered until you switch back to "Use my current location" (agreed later on 31 Oct 2026).
+- The dressing temperature is rounded to the nearest whole degree (halves round up, so 10.5 becomes 11), and the outfit uses that rounded number, so it always matches the number on screen (agreed later on 31 Oct 2026).
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -113,6 +114,8 @@ Every recommendation comes from one number, the dressing temperature, compared a
 | Profile | Runs hot +2 °C · Neutral 0 · Runs cold −2 °C |
 | Learned offset | Starts at 0, moved by feedback (see Feedback loop), separate for running and cycling |
 | Cycling chill | 4 °C on the bike, to stand in for wind from riding speed; 0 for running |
+
+The result is rounded to the nearest whole degree (halves round up), and that rounded number is what the thresholds below are compared against.
 
 **Dress for the middle of the session, not the start.** Working muscles release 70 to 100% of their energy as heat, and the body stores most of it in the first 15 to 20 minutes, before sweating and skin blood flow catch up. Core temperature then levels off at a new, higher steady state after 30 to 45 minutes. Two rules follow:
 

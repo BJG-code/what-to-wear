@@ -188,6 +188,45 @@ test.describe('with location allowed', () => {
     await expect(page.locator('#results')).toBeHidden();
   });
 
+  test('shows the dressing temperature and how it was worked out', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    // Easy 8 km run, feels like 8.1 °C, neutral: 8.1 + 0 + 2 + 0 + 0 = 10.1, shown as 10
+    await openOutfit(page);
+    await expect(page.locator('#dressing-temp')).toHaveText('10°C');
+    await expect(page.getByText('Dressing for')).toBeVisible();
+    await expect(page.locator('#dressing-parts li')).toHaveText([
+      'Feels like 8°',
+      '+2° for 8 km',
+      'Easy +0° · Neutral +0°',
+      'Learned +0°',
+    ]);
+  });
+
+  test('cycling takes off 4 °C, and effort and distance add on', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByText('Cycling').click();
+    // Hard 25 km ride: 8.1 + 4 + 2 + 0 + 0 − 4 = 10.1, shown as 10
+    await openOutfit(page, { distance: '25', effort: 'Hard' });
+    await expect(page.locator('#dressing-temp')).toHaveText('10°C');
+    await expect(page.locator('#dressing-parts li')).toHaveText([
+      'Feels like 8°',
+      '+2° for 25 km',
+      'Hard +4° · Neutral +0°',
+      'Learned +0° · Bike chill −4°',
+    ]);
+  });
+
+  test('below freezing shows a minus sign', async ({ page }) => {
+    await mockServices(page, { weather: hourlyForecast(() => ({ apparent_temperature: -3.4 })) });
+    await page.goto('/');
+    // Easy 2 km run: −3.4 + 0 + 0 = −3.4, shown as −3
+    await openOutfit(page, { distance: '2' });
+    await expect(page.locator('#dressing-temp')).toHaveText('−3°C');
+    await expect(page.locator('#dressing-parts li').first()).toHaveText('Feels like −3°');
+  });
+
   test('shows running kit by default', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
@@ -665,6 +704,25 @@ test.describe('with location allowed', () => {
     const back = await page.getByRole('button', { name: 'Back to plan a session' }).boundingBox();
     expect(back.height).toBeGreaterThanOrEqual(44);
     expect(back.width).toBeGreaterThanOrEqual(44);
+  });
+});
+
+test.describe('runs cold profile', () => {
+  test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
+
+  test('runs cold dresses you 2 °C warmer, and says so', async ({ page }) => {
+    await withProfile(page, { name: 'Bradley', warmth: 'cold' });
+    await mockServices(page);
+    await page.goto('/');
+    // Medium 5 km run: 8.1 + 2 + 1 − 2 = 9.1, shown as 9
+    await openOutfit(page, { distance: '5', effort: 'Medium' });
+    await expect(page.locator('#dressing-temp')).toHaveText('9°C');
+    await expect(page.locator('#dressing-parts li')).toHaveText([
+      'Feels like 8°',
+      '+1° for 5 km',
+      'Medium +2° · Runs cold −2°',
+      'Learned +0°',
+    ]);
   });
 });
 

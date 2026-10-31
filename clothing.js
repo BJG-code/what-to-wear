@@ -1,11 +1,20 @@
 // Works out what to wear from the weather.
 // Kept separate from the page so the rules can be tested on their own.
 (function (root) {
-  // From "Do you run hot or cold?": runs hot dresses you 2 °C lighter, runs cold 2 °C warmer
-  const PREFERENCE_ADJUST = { hot: 2, neutral: 0, cold: -2 };
+  // Dressing temp = Feels like + Effort + Distance + Profile + Learned offset − Cycling chill
 
-  // Cycling feels colder than running: you're moving faster and working less hard
-  const ACTIVITY_ADJUST = { running: 0, cycling: -2 };
+  // Harder efforts make more heat, so you can dress lighter
+  const EFFORT_ADJUST = { easy: 0, medium: 2, hard: 4 };
+
+  // Distance stands in for time: you warm up over the first 20 to 45 minutes, then it stops adding.
+  // Under the first number +0, up to and including the second +1, over the second +2.
+  const DISTANCE_BANDS = { running: [3, 7], cycling: [8, 20] };
+
+  // From "Do you run hot or cold?": runs hot dresses you 2 °C lighter, runs cold 2 °C warmer
+  const PROFILE_ADJUST = { hot: 2, neutral: 0, cold: -2 };
+
+  // On the bike the wind from riding speed makes it feel 4 °C colder
+  const CYCLING_CHILL = 4;
 
   // Rain chance (%) at which to recommend a waterproof, or a light one just in case
   const RAIN_LIKELY = 50;
@@ -14,8 +23,29 @@
   // Wind speed (km/h) at which to recommend wind protection
   const WINDY = { running: 30, cycling: 25 };
 
-  function effectiveTemperature({ feelsLike, activity, preference }) {
-    return feelsLike + ACTIVITY_ADJUST[activity] + PREFERENCE_ADJUST[preference];
+  function distanceAdjust(activity, distance) {
+    const [short, long] = DISTANCE_BANDS[activity];
+    if (distance < short) return 0;
+    if (distance <= long) return 1;
+    return 2;
+  }
+
+  // Works out the dressing temperature and each part of it, so the page can show how it was worked out.
+  // learnedOffset comes from your feedback (0 until feedback is built).
+  function dressingTemperature({ activity, feelsLike, effort, distance, warmth, learnedOffset = 0 }) {
+    const parts = {
+      feelsLike,
+      effort: EFFORT_ADJUST[effort],
+      distance: distanceAdjust(activity, distance),
+      profile: PROFILE_ADJUST[warmth],
+      learned: learnedOffset,
+      chill: activity === 'cycling' ? CYCLING_CHILL : 0,
+    };
+    const exact = parts.feelsLike + parts.effort + parts.distance + parts.profile + parts.learned - parts.chill;
+    // Rounded to the nearest whole degree (halves round up), so the outfit always matches the number on screen.
+    // "|| 0" turns −0 into 0.
+    const total = Math.round(exact) || 0;
+    return { ...parts, exact, total };
   }
 
   function runningKit(t) {
@@ -75,10 +105,11 @@
     };
   }
 
-  // weather: { feelsLike (°C), windSpeed (km/h), rainChance (%), isDay (true/false), sunny (true/false) }
-  // Returns { effectiveTemp, items: [{ area, item }] } in head-to-toe order
-  function recommend({ activity, preference, weather }) {
-    const t = effectiveTemperature({ feelsLike: weather.feelsLike, activity, preference });
+  // dressingTemp: from dressingTemperature (°C)
+  // weather: { windSpeed (km/h), rainChance (%), isDay (true/false), sunny (true/false) }
+  // Returns { items: [{ area, item }] } in head-to-toe order
+  function recommend({ activity, dressingTemp, weather }) {
+    const t = dressingTemp;
     const kit = activity === 'cycling' ? cyclingKit(t) : runningKit(t);
     const extras = [];
 
@@ -103,10 +134,10 @@
     }
     for (const extra of extras) items.push({ area: 'Also', item: extra });
 
-    return { effectiveTemp: t, items };
+    return { items };
   }
 
-  const api = { recommend, effectiveTemperature };
+  const api = { recommend, dressingTemperature };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else {

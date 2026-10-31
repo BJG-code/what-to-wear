@@ -319,6 +319,32 @@
     render();
   }
 
+  // A temperature to the nearest whole degree, with a proper minus sign, e.g. "−3"
+  function wholeDegrees(n) {
+    const rounded = Math.round(n) || 0;
+    return rounded < 0 ? `−${-rounded}` : String(rounded);
+  }
+
+  // An adjustment with its sign, e.g. "+2°", "−4°" or "+0.5°"
+  function signed(n) {
+    return `${n < 0 ? '−' : '+'}${Math.abs(n)}°`;
+  }
+
+  // How the dressing temperature was worked out, one line at a time, e.g.
+  // "Feels like 6°", "+2° for 8 km", "Easy +0° · Neutral +0°", "Learned +0°"
+  function breakdownLines(d, session) {
+    const effort = session.effort[0].toUpperCase() + session.effort.slice(1);
+    const profile = { hot: 'Runs hot', neutral: 'Neutral', cold: 'Runs cold' }[state.profile ? state.profile.warmth : 'neutral'];
+    const last = [`Learned ${signed(d.learned)}`];
+    if (d.chill) last.push(`Bike chill ${signed(-d.chill)}`);
+    return [
+      `Feels like ${wholeDegrees(d.feelsLike)}°`,
+      `${signed(d.distance)} for ${session.distance} km`,
+      `${effort} ${signed(d.effort)} · ${profile} ${signed(d.profile)}`,
+      last.join(' · '),
+    ];
+  }
+
   function render() {
     if (!state.weather || !state.session) return;
     const w = state.weather;
@@ -334,16 +360,31 @@
       : `Forecast for ${state.location.source === 'search' ? state.location.name : 'where you are now'}.`;
     el('place-note').hidden = false;
 
+    // The dressing temperature and how it was worked out
+    const session = state.session;
+    const dressing = window.Clothing.dressingTemperature({
+      activity: session.activity,
+      feelsLike: w.start.feelsLike,
+      effort: session.effort,
+      distance: session.distance,
+      warmth: state.profile ? state.profile.warmth : 'neutral',
+    });
+    el('dressing-temp').textContent = `${wholeDegrees(dressing.total)}°C`;
+    el('dressing-parts').replaceChildren(...breakdownLines(dressing, session).map((line) => {
+      const li = document.createElement('li');
+      li.textContent = line;
+      return li;
+    }));
+
     // Until the new outfit rules arrive, the rain chance is the worst hour of the session
     const weather = {
-      feelsLike: w.start.feelsLike,
       windSpeed: w.start.windSpeed || 0,
       rainChance: w.worstRainChance || 0,
       isDay: w.start.isDay,
       sunny: w.start.cloudCover !== null && w.start.cloudCover <= window.Weather.SUNNY_CLOUD,
     };
     const { items } = window.Clothing.recommend({
-      activity: state.session.activity, preference: state.profile ? state.profile.warmth : 'neutral', weather,
+      activity: session.activity, dressingTemp: dressing.total, weather,
     });
     const list = el('kit');
     list.replaceChildren(...items.map(({ area, item }) => {
