@@ -64,6 +64,74 @@
       gap: 24px;
     }
 
+    /* Each screen stacks its parts with the same spacing as the page */
+    .screen {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .screen-title {
+      font-size: 1.75rem;
+      margin-bottom: 0;
+    }
+
+    /* The big purple button at the bottom of Plan a session */
+    .primary-button {
+      width: 100%;
+      min-height: 56px;
+      border: none;
+      border-radius: 12px;
+      background: var(--purple);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.125rem;
+      cursor: pointer;
+    }
+
+    .primary-button:hover {
+      background: var(--purple-hover);
+    }
+
+    .primary-button:focus-visible,
+    .back-button:focus-visible {
+      outline: 2px solid var(--purple-light);
+      outline-offset: 2px;
+    }
+
+    /* Back arrow and summary line at the top of Your outfit */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-button {
+      flex: 0 0 44px;
+      height: 44px;
+      margin-left: -10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .back-button:hover {
+      background: var(--selected-tint);
+    }
+
+    #summary {
+      color: var(--muted);
+    }
+
+    #weather-status {
+      color: var(--muted);
+    }
+
     /* Logo and tagline at the top */
     .logo h1 {
       line-height: 0;
@@ -243,6 +311,7 @@
 
     #kit-heading {
       margin-top: 24px;
+      outline: none;
     }
 
     #kit {
@@ -282,54 +351,73 @@
 </head>
 <body>
   <main>
-    <header class="logo">
-      <h1><img src="assets/logo.png" alt="What to wear" width="1438" height="246"></h1>
-      <p class="tagline">Whatever the weather, get it right</p>
-    </header>
+    <!-- Screen 1: Plan a session -->
+    <div id="plan-screen" class="screen">
+      <header class="logo">
+        <h1><img src="assets/logo.png" alt="What to wear" width="1438" height="246"></h1>
+        <p class="tagline">Whatever the weather, get it right</p>
+      </header>
 
-    <section aria-label="Location">
-      <span class="label">Weather for</span>
-      <div class="location-row">
-        <span id="location-name">Finding your location…</span>
-        <button type="button" class="button" id="change-location" aria-expanded="false" aria-controls="search">Change</button>
-      </div>
-      <div id="search" hidden>
-        <form id="search-form" role="search">
-          <input id="place" type="search" placeholder="Search for a town or city" aria-label="Town or city" autocomplete="off" enterkeyhint="search">
-          <button type="submit" class="button">Search</button>
-        </form>
-        <ul id="places" aria-label="Matching places"></ul>
-        <button type="button" class="link-button" id="use-device">Use my current location</button>
-      </div>
-    </section>
+      <h2 class="screen-title">Plan a session</h2>
 
-    <fieldset>
-      <legend class="label">Activity</legend>
-      <div class="choices">
-        <label><input type="radio" name="activity" value="running" checked><span>Running</span></label>
-        <label><input type="radio" name="activity" value="cycling"><span>Cycling</span></label>
-      </div>
-    </fieldset>
+      <fieldset>
+        <legend class="label">Activity</legend>
+        <div class="choices">
+          <label><input type="radio" name="activity" value="running" checked><span>Running</span></label>
+          <label><input type="radio" name="activity" value="cycling"><span>Cycling</span></label>
+        </div>
+      </fieldset>
 
-    <p id="status" role="status" hidden></p>
+      <fieldset>
+        <legend class="label">I usually</legend>
+        <div class="choices">
+          <label><input type="radio" name="preference" value="cold"><span>Feel the cold</span></label>
+          <label><input type="radio" name="preference" value="normal" checked><span>Feel normal</span></label>
+          <label><input type="radio" name="preference" value="warm"><span>Run warm</span></label>
+        </div>
+      </fieldset>
 
-    <section id="results" aria-label="Weather and what to wear" hidden>
-      <div>
-        <p id="temperature"></p>
-        <p id="conditions"></p>
-      </div>
-      <h2 id="kit-heading">Wear for your run</h2>
-      <ul id="kit"></ul>
-    </section>
+      <section aria-label="Location">
+        <span class="label">Weather for</span>
+        <div class="location-row">
+          <span id="location-name">Finding your location…</span>
+          <button type="button" class="button" id="change-location" aria-expanded="false" aria-controls="search">Change</button>
+        </div>
+        <div id="search" hidden>
+          <form id="search-form" role="search">
+            <input id="place" type="search" placeholder="Search for a town or city" aria-label="Town or city" autocomplete="off" enterkeyhint="search">
+            <button type="submit" class="button">Search</button>
+          </form>
+          <ul id="places" aria-label="Matching places"></ul>
+          <button type="button" class="link-button" id="use-device">Use my current location</button>
+        </div>
+      </section>
 
-    <fieldset>
-      <legend class="label">I usually</legend>
-      <div class="choices">
-        <label><input type="radio" name="preference" value="cold"><span>Feel the cold</span></label>
-        <label><input type="radio" name="preference" value="normal" checked><span>Feel normal</span></label>
-        <label><input type="radio" name="preference" value="warm"><span>Run warm</span></label>
+      <p id="status" role="status" hidden></p>
+
+      <button type="button" class="primary-button" id="what-to-wear">What should I wear?</button>
+    </div>
+
+    <!-- Screen 2: Your outfit -->
+    <div id="outfit-screen" class="screen" hidden>
+      <div class="top-bar">
+        <button type="button" class="back-button" id="back" aria-label="Back to plan a session">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <p id="summary"></p>
       </div>
-    </fieldset>
+
+      <p id="weather-status" role="status" hidden></p>
+
+      <section id="results" aria-label="Weather and what to wear" hidden>
+        <div>
+          <p id="temperature"></p>
+          <p id="conditions"></p>
+        </div>
+        <h2 id="kit-heading" tabindex="-1">Your outfit</h2>
+        <ul id="kit"></ul>
+      </section>
+    </div>
 
     <footer>
       Weather data from <a href="https://open-meteo.com/">Open-Meteo</a>

@@ -1,4 +1,5 @@
 // Runs the page: finds your location, fetches the weather and shows what to wear.
+// There are two screens: "Plan a session" and "Your outfit".
 (function () {
   const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
   const PLACES_URL = 'https://geocoding-api.open-meteo.com/v1/search';
@@ -41,6 +42,34 @@
   function setStatus(message) {
     el('status').textContent = message;
     el('status').hidden = !message;
+  }
+
+  // Messages about the weather show on the Your outfit screen
+  function setWeatherStatus(message) {
+    el('weather-status').textContent = message;
+    el('weather-status').hidden = !message;
+  }
+
+  // Show one screen and hide the other, starting at the top of the page
+  function showScreen(name) {
+    el('plan-screen').hidden = name !== 'plan';
+    el('outfit-screen').hidden = name !== 'outfit';
+    window.scrollTo(0, 0);
+  }
+
+  // The line at the top of Your outfit, e.g. "Sat 31 Oct · 07:00 · Run"
+  function summaryText(when, activity) {
+    const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const time = when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return [day.replace(',', ''), time, activity === 'cycling' ? 'Ride' : 'Run'].join(' · ');
+  }
+
+  function openOutfit() {
+    el('summary').textContent = summaryText(new Date(), state.activity);
+    // Adds a step to the browser history, so swiping back returns to Plan a session
+    history.pushState({ screen: 'outfit' }, '');
+    showScreen('outfit');
+    el('back').focus();
   }
 
   function showSearch(show) {
@@ -95,7 +124,7 @@
       timezone: 'auto',
     });
     el('results').hidden = true;
-    setStatus('Checking the weather…');
+    setWeatherStatus('Checking the weather…');
     try {
       const response = await fetch(`${WEATHER_URL}?${params}`);
       if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
@@ -110,11 +139,11 @@
         sunny: data.current.weather_code <= 1,
         description: WEATHER_TEXT[data.current.weather_code] || '',
       };
-      setStatus('');
+      setWeatherStatus('');
       render();
     } catch (e) {
       state.weather = null;
-      setStatus('Couldn\'t get the weather right now. Check your connection and try again.');
+      setWeatherStatus('Couldn\'t get the weather right now. Check your connection and try again.');
     }
   }
 
@@ -143,7 +172,6 @@
       li.append(label, text);
       return li;
     }));
-    el('kit-heading').textContent = state.activity === 'cycling' ? 'Wear for your ride' : 'Wear for your run';
     el('results').hidden = false;
   }
 
@@ -195,6 +223,16 @@
         });
       }
     }
+
+    el('what-to-wear').addEventListener('click', openOutfit);
+    // The back arrow does the same as the browser's back, so both end up in the same place
+    el('back').addEventListener('click', () => history.back());
+    window.addEventListener('popstate', (event) => {
+      showScreen(event.state && event.state.screen === 'outfit' ? 'outfit' : 'plan');
+    });
+    // Always open on Plan a session, even after a reload
+    history.replaceState(null, '');
+    showScreen('plan');
 
     el('change-location').addEventListener('click', () => showSearch(el('search').hidden));
     el('use-device').addEventListener('click', useDeviceLocation);

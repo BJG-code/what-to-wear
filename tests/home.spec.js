@@ -34,8 +34,14 @@ async function mockServices(page, { weather = sampleWeather, places = samplePlac
   return requests;
 }
 
+// Taps "What should I wear?" to go from Plan a session to Your outfit
+async function openOutfit(page) {
+  await page.getByRole('button', { name: 'What should I wear?' }).click();
+  await expect(page.locator('#outfit-screen')).toBeVisible();
+}
+
 test.describe('with location allowed', () => {
-  test.use({ geolocation: LONDON, permissions: ['geolocation'] });
+  test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
 
   test('page has the right title in the browser tab', async ({ page }) => {
     await mockServices(page);
@@ -48,6 +54,7 @@ test.describe('with location allowed', () => {
     const requests = await mockServices(page);
     await page.goto('/');
     await expect(page.locator('#location-name')).toHaveText('Your current location');
+    await openOutfit(page);
     await expect(page.locator('#temperature')).toHaveText('10°C');
     await expect(page.locator('#conditions')).toHaveText(
       'Partly cloudy · Feels like 8°C · Wind 12 km/h · Rain chance 15%'
@@ -59,7 +66,9 @@ test.describe('with location allowed', () => {
   test('shows running kit by default', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Wear for your run' })).toBeVisible();
+    await openOutfit(page);
+    await expect(page.getByRole('heading', { name: 'Your outfit' })).toBeVisible();
+    await expect(page.locator('#summary')).toContainText('Run');
     await expect(page.locator('#kit li')).toHaveText([
       'TopLong-sleeve top',
       'LegsShorts or 3/4 tights',
@@ -70,15 +79,19 @@ test.describe('with location allowed', () => {
     await mockServices(page);
     await page.goto('/');
     await page.getByText('Cycling').click();
-    await expect(page.getByRole('heading', { name: 'Wear for your ride' })).toBeVisible();
+    await openOutfit(page);
+    await expect(page.locator('#summary')).toContainText('Ride');
     await expect(page.locator('#kit')).toContainText('Bib tights');
   });
 
   test('saying you feel the cold gives warmer kit', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
+    await openOutfit(page);
     await expect(page.locator('#kit')).toContainText('Shorts or 3/4 tights');
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
     await page.getByText('Feel the cold').click();
+    await openOutfit(page);
     await expect(page.locator('#kit')).toContainText('Running tights');
   });
 
@@ -95,7 +108,7 @@ test.describe('with location allowed', () => {
   test('can change to another place, and go back to your location', async ({ page }) => {
     const requests = await mockServices(page);
     await page.goto('/');
-    await expect(page.locator('#temperature')).toHaveText('10°C');
+    await expect.poll(() => requests.length).toBe(1);
 
     await page.getByRole('button', { name: 'Change' }).click();
     await page.getByRole('searchbox', { name: 'Town or city' }).fill('Malaga');
@@ -129,7 +142,8 @@ test.describe('with location allowed', () => {
   test('tells you when the weather can\'t be fetched', async ({ page }) => {
     await mockServices(page, { weather: null });
     await page.goto('/');
-    await expect(page.locator('#status')).toHaveText(
+    await openOutfit(page);
+    await expect(page.locator('#weather-status')).toHaveText(
       'Couldn\'t get the weather right now. Check your connection and try again.'
     );
     await expect(page.locator('#results')).toBeHidden();
@@ -178,9 +192,61 @@ test.describe('with location allowed', () => {
   test('page does not scroll sideways', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
-    await expect(page.locator('#kit li').first()).toBeVisible();
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    let scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
+    await openOutfit(page);
+    await expect(page.locator('#kit li').first()).toBeVisible();
+    scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
+  });
+
+  test('opens on Plan a session, with the outfit hidden', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Plan a session' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'What should I wear?' })).toBeVisible();
+    await expect(page.locator('#outfit-screen')).toBeHidden();
+  });
+
+  test('"What should I wear?" opens Your outfit, with the summary line', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-28T07:00:00Z'));
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page);
+    await expect(page.locator('#plan-screen')).toBeHidden();
+    await expect(page.locator('#summary')).toHaveText('Wed 28 Oct · 07:00 · Run');
+    await expect(page.locator('#kit li').first()).toBeVisible();
+  });
+
+  test('the back arrow returns to Plan a session, keeping your choices', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByText('Cycling').click();
+    await openOutfit(page);
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    await expect(page.locator('#plan-screen')).toBeVisible();
+    await expect(page.locator('#outfit-screen')).toBeHidden();
+    await expect(page.getByRole('radio', { name: 'Cycling' })).toBeChecked();
+  });
+
+  test('the phone\'s back gesture also returns to Plan a session', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page);
+    await page.goBack();
+    await expect(page.locator('#plan-screen')).toBeVisible();
+    await expect(page.locator('#outfit-screen')).toBeHidden();
+  });
+
+  test('buttons on both screens are big enough to tap', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const wear = await page.getByRole('button', { name: 'What should I wear?' }).boundingBox();
+    expect(wear.height).toBeGreaterThanOrEqual(44);
+    await openOutfit(page);
+    const back = await page.getByRole('button', { name: 'Back to plan a session' }).boundingBox();
+    expect(back.height).toBeGreaterThanOrEqual(44);
+    expect(back.width).toBeGreaterThanOrEqual(44);
   });
 });
 
