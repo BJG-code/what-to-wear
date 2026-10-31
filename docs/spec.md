@@ -13,6 +13,7 @@
 - Feedback is three buttons: Too hot / Perfect / Too cold. "Way off" is removed.
 - You can search for a town instead of using your location, e.g. to plan a session somewhere you aren't yet. The town you pick is remembered until you switch back to "Use my current location" (agreed later on 31 Oct 2026).
 - The dressing temperature is rounded to the nearest whole degree (halves round up, so 10.5 becomes 11), and the outfit uses that rounded number, so it always matches the number on screen (agreed later on 31 Oct 2026).
+- "Not overcast" for sun cream means cloud cover under 50%; 50% or more counts as overcast (agreed later on 31 Oct 2026).
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -135,7 +136,7 @@ So the app will sometimes deliberately recommend kit that feels chilly at the st
 | Hat | Below 4 (replaces headband) |
 | Gloves | Below 7 |
 | Rain | No kit change; the rain chance shows in the weather readings |
-| Sun cream | Temperature 16 °C or more, in daylight, and not overcast |
+| Sun cream | Temperature 16 °C or more, in daylight, and not overcast (cloud cover under 50%) |
 | Sunglasses | Daylight and cloud cover 30% or less |
 
 **Cycling** (dressing temp, °C, after cycling chill)
@@ -147,7 +148,7 @@ So the app will sometimes deliberately recommend kit that feels chilly at the st
 | Lower body | 12+ Shorts · below 12 Tights |
 | Buff | Below 8 |
 | Gloves | Below 10 |
-| Sun cream | Temperature 16 °C or more, in daylight, and not overcast |
+| Sun cream | Temperature 16 °C or more, in daylight, and not overcast (cloud cover under 50%) |
 | Sunglasses | Daylight and cloud cover 30% or less |
 
 Sun cream uses the actual temperature, not the dressing temperature. Both sun items go in the Accessories card.

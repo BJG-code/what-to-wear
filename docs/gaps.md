@@ -59,12 +59,12 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 - [x] 22. No dressing temperature: effort, distance and learned offset are missing, and cycling takes off 2 °C instead of 4 °C.
 - [x] 23. The dressing temperature and how it was worked out aren't shown.
-- [ ] 24. Running thresholds and items are different from the spec (vest 16+, T-shirt 11–15, long sleeve 6–10, long sleeve + gilet 5 or below; shorts 8+ else tights; headband 4–8; hat below 4; gloves below 7).
-- [ ] 25. Cycling thresholds and items are different from the spec (short sleeve 18+, + base layer 13–17, long sleeve + base layer 8–12, long sleeve + gilet 7 or below; shorts 12+ else tights; buff below 8; gloves below 10).
-- [ ] 26. Items not in the spec to remove: packable rain jacket at 30%, windproof jacket or gilet based on wind speed, overshoes, socks, arm and knee warmers, mitts, reflective kit.
-- [ ] 27. Sun rules differ: today "sunglasses and sun cream" appear together at 18 °C+ on clear days; should be sun cream at 16 °C+ (daylight, not overcast) and sunglasses separately when cloud cover is 30% or less.
-- [ ] 28. Missing the running gilet rule (gusts 40 km/h or more and dressing temp below 12).
-- [ ] 29. Running gets a waterproof when rain is 50%+; the spec says no kit change for rain when running (waterproof is cycling only).
+- [x] 24. Running thresholds and items are different from the spec (vest 16+, T-shirt 11–15, long sleeve 6–10, long sleeve + gilet 5 or below; shorts 8+ else tights; headband 4–8; hat below 4; gloves below 7).
+- [x] 25. Cycling thresholds and items are different from the spec (short sleeve 18+, + base layer 13–17, long sleeve + base layer 8–12, long sleeve + gilet 7 or below; shorts 12+ else tights; buff below 8; gloves below 10).
+- [x] 26. Items not in the spec to remove: packable rain jacket at 30%, windproof jacket or gilet based on wind speed, overshoes, socks, arm and knee warmers, mitts, reflective kit.
+- [x] 27. Sun rules differ: today "sunglasses and sun cream" appear together at 18 °C+ on clear days; should be sun cream at 16 °C+ (daylight, not overcast) and sunglasses separately when cloud cover is 30% or less.
+- [x] 28. Missing the running gilet rule (gusts 40 km/h or more and dressing temp below 12).
+- [x] 29. Running gets a waterproof when rain is 50%+; the spec says no kit change for rain when running (waterproof is cycling only).
 - [ ] 30. Kit is a head-to-toe list, not three cards (Upper body, Lower body, Accessories) with icons.
 
 ## Notes
@@ -91,6 +91,7 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 - [ ] 41. README and ROADMAP describe the old version and contradict the spec.
 - [ ] 42. The automated checks test the old rules and layout; they'll be rewritten gap by gap as each one is fixed.
 
-## Open question
+## Open questions
 
 - [x] Thresholds are whole numbers (6 to 10, 5 or below), so 10.5 °C has no clear answer. Decided 31 Oct 2026: round the dressing temperature to the nearest whole degree (halves round up), and use that rounded number for the outfit. Added to the spec.
+- [x] The spec said sun cream is "not overcast" without saying how cloudy that is. Decided 31 Oct 2026: 50% cloud cover or more counts as overcast. Added to the spec.

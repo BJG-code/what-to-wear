@@ -16,12 +16,19 @@
   // On the bike the wind from riding speed makes it feel 4 °C colder
   const CYCLING_CHILL = 4;
 
-  // Rain chance (%) at which to recommend a waterproof, or a light one just in case
+  // Rain chance (%) at which cycling adds a waterproof jacket. Running has no kit change for rain.
   const RAIN_LIKELY = 50;
-  const RAIN_POSSIBLE = 30;
 
-  // Wind speed (km/h) at which to recommend wind protection
-  const WINDY = { running: 30, cycling: 25 };
+  // Gusts (km/h) at which a run gets a gilet, when the dressing temp is below GILET_GUSTS_BELOW
+  const GUSTY = 40;
+  const GILET_GUSTS_BELOW = 12;
+
+  // Sun cream: actual temperature (°C) at or above this, in daylight, and not overcast
+  const SUN_CREAM_TEMP = 16;
+  // Cloud cover (%) at or above which the sky counts as overcast (agreed 31 Oct 2026)
+  const OVERCAST = 50;
+  // Sunglasses: daylight and cloud cover (%) at or below this
+  const SUNGLASSES_CLOUD = 30;
 
   function distanceAdjust(activity, distance) {
     const [short, long] = DISTANCE_BANDS[activity];
@@ -48,92 +55,68 @@
     return { ...parts, exact, total };
   }
 
-  function runningKit(t) {
-    if (t >= 18) return { top: 'Vest or short-sleeve top', legs: 'Shorts' };
-    if (t >= 13) return { top: 'Short-sleeve top', legs: 'Shorts' };
-    if (t >= 8) return { top: 'Long-sleeve top', legs: 'Shorts or 3/4 tights' };
-    if (t >= 3) return { top: 'Long-sleeve thermal top', legs: 'Running tights', hands: 'Light gloves' };
-    if (t >= -2) {
-      return {
-        head: 'Hat or headband',
-        top: 'Thermal base layer and a light jacket',
-        legs: 'Running tights',
-        hands: 'Gloves',
-      };
-    }
-    return {
-      head: 'Warm hat and neck warmer',
-      top: 'Thermal base layer and an insulated jacket',
-      legs: 'Thermal tights',
-      hands: 'Warm gloves',
-      feet: 'Warm socks',
-    };
+  // Running, from the dressing temperature (°C) and the worst gusts of the session (km/h)
+  function runningKit(t, gusts) {
+    const upper = [];
+    if (t >= 16) upper.push('Vest');
+    else if (t >= 11) upper.push('T-shirt');
+    else upper.push('Long sleeve');
+    // Gilet at 5 or below, or when it's gusty and below 12
+    if (t <= 5 || (gusts !== null && gusts >= GUSTY && t < GILET_GUSTS_BELOW)) upper.push('Gilet');
+
+    const lower = [t >= 8 ? 'Shorts' : 'Tights'];
+
+    const accessories = [];
+    if (t < 4) accessories.push('Hat');
+    else if (t <= 8) accessories.push('Headband');
+    if (t < 7) accessories.push('Gloves');
+    return { upper, lower, accessories };
   }
 
-  function cyclingKit(t) {
-    if (t >= 20) return { top: 'Short-sleeve jersey', legs: 'Bib shorts', hands: 'Fingerless mitts' };
-    if (t >= 15) return { top: 'Short-sleeve jersey and a base layer', legs: 'Bib shorts', hands: 'Fingerless mitts' };
-    if (t >= 10) {
-      return {
-        top: 'Short-sleeve jersey with arm warmers',
-        legs: 'Bib shorts with knee warmers',
-        hands: 'Light full-finger gloves',
-      };
+  // Cycling, from the dressing temperature (°C, after cycling chill) and the worst rain chance (%)
+  function cyclingKit(t, rainChance) {
+    let upper;
+    if (t >= 18) upper = ['Short sleeve'];
+    else if (t >= 13) upper = ['Short sleeve', 'Base layer'];
+    else if (t >= 8) upper = ['Long sleeve', 'Base layer'];
+    else upper = ['Long sleeve', 'Gilet'];
+    // Waterproof whatever the temperature
+    if (rainChance !== null && rainChance >= RAIN_LIKELY) upper.push('Waterproof jacket');
+
+    const lower = [t >= 12 ? 'Shorts' : 'Tights'];
+
+    const accessories = [];
+    if (t < 8) accessories.push('Buff');
+    if (t < 10) accessories.push('Gloves');
+    return { upper, lower, accessories };
+  }
+
+  // Sun cream and sunglasses, the same for both activities. Uses the actual temperature, not the dressing temp.
+  function sunItems({ temperature, cloudCover, isDay }) {
+    const items = [];
+    if (!isDay || cloudCover === null || cloudCover === undefined) return items;
+    if (temperature !== null && temperature !== undefined && temperature >= SUN_CREAM_TEMP && cloudCover < OVERCAST) {
+      items.push('Sun cream');
     }
-    if (t >= 5) {
-      return {
-        top: 'Long-sleeve thermal jersey and a base layer',
-        legs: 'Bib tights',
-        hands: 'Full-finger gloves',
-      };
-    }
-    if (t >= 0) {
-      return {
-        head: 'Cap under your helmet',
-        top: 'Thermal base layer and a winter jacket',
-        legs: 'Thermal bib tights',
-        hands: 'Winter gloves',
-        feet: 'Thermal overshoes',
-      };
-    }
-    return {
-      head: 'Thermal cap under your helmet and a neck warmer',
-      top: 'Thermal base layer and an insulated winter jacket',
-      legs: 'Thermal bib tights',
-      hands: 'Thick winter gloves',
-      feet: 'Thermal overshoes and warm socks',
-    };
+    if (cloudCover <= SUNGLASSES_CLOUD) items.push('Sunglasses');
+    return items;
   }
 
   // dressingTemp: from dressingTemperature (°C)
-  // weather: { windSpeed (km/h), rainChance (%), isDay (true/false), sunny (true/false) }
-  // Returns { items: [{ area, item }] } in head-to-toe order
+  // weather: at the start hour { temperature (°C), cloudCover (%), isDay (true/false) },
+  //   and the worst hour of the session { gusts (km/h), rainChance (%) }. A gap in the forecast is null.
+  // Returns { items: [{ area, item }] }, grouped as Upper body, Lower body, Accessories
   function recommend({ activity, dressingTemp, weather }) {
     const t = dressingTemp;
-    const kit = activity === 'cycling' ? cyclingKit(t) : runningKit(t);
-    const extras = [];
-
-    if (weather.rainChance >= RAIN_LIKELY) {
-      extras.push('Waterproof jacket');
-    } else if (weather.rainChance >= RAIN_POSSIBLE) {
-      extras.push('Packable rain jacket, just in case');
-    } else if (weather.windSpeed >= WINDY[activity]) {
-      extras.push(activity === 'cycling' ? 'Windproof gilet' : 'Windproof jacket');
-    }
-
-    if (!weather.isDay) {
-      extras.push(activity === 'cycling' ? 'Front and rear lights, and something reflective' : 'Something reflective');
-    } else if (weather.sunny && t >= 18) {
-      extras.push('Sunglasses and sun cream');
-    }
+    const gusts = weather.gusts ?? null;
+    const rainChance = weather.rainChance ?? null;
+    const kit = activity === 'cycling' ? cyclingKit(t, rainChance) : runningKit(t, gusts);
+    kit.accessories.push(...sunItems(weather));
 
     const items = [];
-    const areas = [['head', 'Head'], ['top', 'Top'], ['legs', 'Legs'], ['hands', 'Hands'], ['feet', 'Feet']];
-    for (const [key, label] of areas) {
-      if (kit[key]) items.push({ area: label, item: kit[key] });
+    for (const [key, area] of [['upper', 'Upper body'], ['lower', 'Lower body'], ['accessories', 'Accessories']]) {
+      for (const item of kit[key]) items.push({ area, item });
     }
-    for (const extra of extras) items.push({ area: 'Also', item: extra });
-
     return { items };
   }
 
