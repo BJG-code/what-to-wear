@@ -4,7 +4,9 @@ Run and ride clothing recommendations for the weather.
 
 Live site: https://bjg-code.github.io/what-to-wear/
 
-See [ROADMAP.md](ROADMAP.md) for what's in version 1 and ideas for later versions.
+- What the app should do: [docs/spec.md](docs/spec.md)
+- What's left to build, and in what order: [docs/gaps.md](docs/gaps.md)
+- How each feature gets built: [docs/routine.md](docs/routine.md)
 
 ## Files
 

@@ -129,3 +129,4 @@ Shown below the cards only when they apply:
 - **Keep the automated checks passing.** Run `npm test` before every commit; the same checks run on every pull request (`.github/workflows/checks.yml`). Add or update tests for every rule you build, including the boundaries (e.g. 7 and 8 °C). Never skip, weaken or delete a test just to make it pass.
 - Write short, plain-English comments in the code, matching the current style.
 - Work on the session's branch with clear commit messages. Open a pull request only when asked.
+- Bradley's routine for each feature is in `docs/routine.md`. At the end of a session, remind him of the next step in it (usually: ask to open the PR).
