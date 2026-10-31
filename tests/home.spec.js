@@ -172,7 +172,7 @@ test.describe('with location allowed', () => {
       weather: hourlyForecast((time) => (time === '2026-10-28T08:00' ? { precipitation_probability: 60 } : {})),
     });
     await page.goto('/');
-    await page.getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Cycling').click();
     // 07:00 for 48 minutes ends nearest 08:00, so the rain counts
     await openOutfit(page, { duration: '48' });
     await expect(page.locator('#reading-rain')).toHaveText('10%');
@@ -292,7 +292,7 @@ test.describe('with location allowed', () => {
   test('cycling takes off 4 °C, and effort and distance add on', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
-    await page.getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Cycling').click();
     // Hard 25 km ride: 8.1 + 4 + 2 + 0 + 0 − 4 = 10.1, shown as 10
     await openOutfit(page, { distance: '25', effort: 'Hard' });
     await expect(page.locator('#dressing-temp')).toHaveText('10°C');
@@ -327,7 +327,7 @@ test.describe('with location allowed', () => {
   test('switching to cycling changes the kit', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
-    await page.getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Cycling').click();
     await openOutfit(page);
     await expect(page.locator('#summary')).toContainText('ride');
     // Easy 8 km ride, dressing for 5 °C after the bike chill
@@ -337,7 +337,7 @@ test.describe('with location allowed', () => {
   test('remembers your choices next time', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
-    await page.getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Cycling').click();
     await page.reload();
     await expect(page.getByRole('radio', { name: 'Cycling' })).toBeChecked();
     await expect(page.getByText('Hello Bradley!')).toBeVisible();
@@ -373,7 +373,7 @@ test.describe('with location allowed', () => {
     await mockServices(page);
     await page.goto('/');
     await page.getByRole('textbox', { name: 'Your name' }).fill(' Bradley ');
-    await page.getByText('Runs cold', { exact: true }).click();
+    await page.locator('#profile-screen').getByText('Runs cold', { exact: true }).click();
     await page.getByRole('button', { name: 'Let\'s go' }).click();
     await expect(page.getByRole('heading', { name: 'Plan a session' })).toBeVisible();
     await expect(page.locator('#greeting')).toHaveText('Hello Bradley!');
@@ -393,7 +393,7 @@ test.describe('with location allowed', () => {
     for (const target of [
       page.getByRole('textbox', { name: 'Your name' }),
       page.getByRole('button', { name: 'Let\'s go' }),
-      page.locator('input[value="hot"] + span'),
+      page.locator('input[name="warmth"][value="hot"] + span'),
     ]) {
       const box = await target.boundingBox();
       expect(box.height).toBeGreaterThanOrEqual(44);
@@ -408,30 +408,6 @@ test.describe('with location allowed', () => {
     const name = page.getByRole('textbox', { name: 'Your name' });
     await expect(name).toHaveAttribute('autocorrect', 'off');
     await expect(name).toHaveAttribute('spellcheck', 'false');
-  });
-
-  test('"Change your details" lets you fix your name and run hot or cold', async ({ page }) => {
-    await mockServices(page);
-    await page.goto('/');
-    await expect(page.locator('#greeting')).toHaveText('Hello Bradley!');
-    const change = page.getByRole('button', { name: 'Change your details' });
-    expect((await change.boundingBox()).height).toBeGreaterThanOrEqual(44);
-    await change.click();
-
-    // Opens Getting to know you with your current answers filled in
-    const name = page.getByRole('textbox', { name: 'Your name' });
-    await expect(name).toHaveValue('Bradley');
-    await expect(page.getByRole('radio', { name: 'Neutral' })).toBeChecked();
-
-    await name.fill('Brad');
-    await page.getByText('Runs hot', { exact: true }).click();
-    await page.getByRole('button', { name: 'Let\'s go' }).click();
-    await expect(page.locator('#greeting')).toHaveText('Hello Brad!');
-
-    await page.reload();
-    await expect(page.locator('#greeting')).toHaveText('Hello Brad!');
-    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')).profile);
-    expect(saved).toEqual({ name: 'Brad', warmth: 'hot' });
   });
 
   test('first launch: a choice saved by the old version is ticked for you', async ({ page }) => {
@@ -509,7 +485,7 @@ test.describe('with location allowed', () => {
     await expect(page.locator('.tagline')).toHaveCSS('color', 'rgb(166, 166, 176)'); // secondary #A6A6B0
     const change = page.getByRole('button', { name: 'Change', exact: true });
     await expect(change).toHaveCSS('color', 'rgb(196, 167, 255)'); // accent text #C4A7FF
-    await expect(page.locator('input[value="running"] + span')).toHaveCSS('background-color', 'rgb(124, 58, 237)'); // selected #7C3AED
+    await expect(page.locator('input[name="activity"][value="running"] + span')).toHaveCSS('background-color', 'rgb(124, 58, 237)'); // selected #7C3AED
     await change.click();
     const box = page.getByRole('searchbox', { name: 'Town or city' });
     await expect(box).toHaveCSS('background-color', 'rgb(24, 24, 29)'); // inputs #18181D
@@ -646,14 +622,14 @@ test.describe('with location allowed', () => {
   test('duration is worked out from the distance: cycling about 25 km/h', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
-    await page.getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Cycling').click();
     const duration = page.getByRole('spinbutton', { name: 'Duration' });
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('25');
     await expect(duration).toHaveValue('60');
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('30');
     await expect(duration).toHaveValue('72');
     // Switching to running works it out again
-    await page.getByText('Running').click();
+    await page.locator('#plan-screen').getByText('Running').click();
     await expect(duration).toHaveValue('180');
   });
 
@@ -665,7 +641,7 @@ test.describe('with location allowed', () => {
     await distance.fill('8');
     await duration.fill('55');
     await distance.fill('10');
-    await page.getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Cycling').click();
     await expect(duration).toHaveValue('55');
     await fillSession(page, { distance: '10' });
     await page.getByRole('button', { name: 'What should I wear?' }).click();
@@ -713,7 +689,7 @@ test.describe('with location allowed', () => {
     await page.clock.setFixedTime(new Date('2026-10-28T07:00:00Z'));
     await mockServices(page);
     await page.goto('/');
-    await page.getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Cycling').click();
     await page.getByRole('radio', { name: 'Saturday 31 October' }).check({ force: true });
     await page.getByLabel('Start time').fill('17:45');
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('42.5');
@@ -764,7 +740,7 @@ test.describe('with location allowed', () => {
   test('the back arrow returns to Plan a session, keeping your choices', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
-    await page.getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Cycling').click();
     await openOutfit(page);
     await page.getByRole('button', { name: 'Back to plan a session' }).click();
     await expect(page.locator('#plan-screen')).toBeVisible();
@@ -956,6 +932,8 @@ test.describe('feedback', () => {
       rating: 'hot', activity: 'running', start: '2026-11-02T07:00', distance: 8, duration: 48,
       effort: 'medium', warmth: 'neutral', dressingTemp: 12, learnedBefore: 0, learnedAfter: 0.5,
     });
+    // Also saved with the rules of thumb that picked the outfit
+    expect(r.rules).toEqual({ vest: 16, tshirt: 11, longSleeve: 6, shorts: 8, headband: 8, hat: 4, gloves: 7 });
     expect(r.forecast.start).toMatchObject({ time: '07:00', temperature: 10.2, feelsLike: 8.1, humidity: 82 });
     expect(r.forecast.hours.length).toBeGreaterThan(0);
   });
@@ -989,7 +967,7 @@ test.describe('feedback', () => {
     await page.getByRole('button', { name: 'Perfect' }).click();
     await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! Your runs will keep dressing you the same way.');
     await page.goBack();
-    await page.locator('label').filter({ hasText: 'Cycling' }).click();
+    await page.locator('#plan-screen label').filter({ hasText: 'Cycling' }).click();
     await openOutfit(page, { time: '11:00' });
     await page.getByRole('button', { name: 'Too hot' }).click();
     await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! Future rides will dress you 0.5° lighter.');
@@ -1075,5 +1053,209 @@ test.describe('feedback', () => {
     await page.clock.setSystemTime(new Date('2026-11-06T08:00:00Z'));
     await page.reload();
     await expect(page.locator('#last-session')).toBeHidden();
+  });
+});
+
+test.describe('settings', () => {
+  test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
+
+  // Opens the page with something already saved, e.g. learned offsets, then taps the cog
+  async function openSettings(page, extra = {}) {
+    await page.addInitScript((saved) => {
+      if (!localStorage.getItem('what-to-wear')) {
+        localStorage.setItem('what-to-wear', JSON.stringify({ profile: { name: 'Bradley', warmth: 'neutral' }, ...saved }));
+      }
+    }, extra);
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  }
+
+  async function saved(page) {
+    return page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')));
+  }
+
+  // The rules of thumb as shown, e.g. ['Vest 16°C and above', ...]
+  async function ruleRows(page) {
+    return page.locator('#rules .rule-button').evaluateAll((buttons) => buttons.map((b) =>
+      [...b.children].map((c) => c.textContent).join(' ')));
+  }
+
+  const rule = (page, item) => page.locator('#rules .rule-button').filter({ has: page.getByText(item, { exact: true }) });
+
+  test('the cog is on Plan a session only, big enough to tap, and the back arrow returns', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    await page.goto('/');
+    const cog = page.getByRole('button', { name: 'Settings' });
+    const box = await cog.boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByRole('button', { name: 'Change your details' })).toHaveCount(0);
+
+    await cog.click();
+    await expect(page.locator('#settings-screen')).toBeVisible();
+    await expect(page.locator('#plan-screen')).toBeHidden();
+    await expect(cog).toBeHidden();
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    await expect(page.locator('#plan-screen')).toBeVisible();
+    await expect(page.locator('#settings-screen')).toBeHidden();
+
+    // The phone's back gesture does the same
+    await cog.click();
+    await page.goBack();
+    await expect(page.locator('#plan-screen')).toBeVisible();
+
+    // No cog on Your outfit
+    await openOutfit(page);
+    await expect(cog).toBeHidden();
+  });
+
+  test('profile: shows your name, hot or cold, and units', async ({ page }) => {
+    await openSettings(page);
+    await expect(page.getByRole('textbox', { name: 'Name' })).toHaveValue('Bradley');
+    await expect(page.getByRole('radio', { name: 'Neutral' })).toBeChecked();
+    await expect(page.locator('#settings-units')).toHaveText('°C · km/h · km');
+  });
+
+  test('profile: changing your name and hot or cold is saved, and used', async ({ page }) => {
+    await openSettings(page);
+    await page.getByRole('textbox', { name: 'Name' }).fill('Brad');
+    await page.locator('#settings-screen').getByText('Runs cold', { exact: true }).click();
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    await expect(page.locator('#greeting')).toHaveText('Hello Brad!');
+    expect((await saved(page)).profile).toEqual({ name: 'Brad', warmth: 'cold' });
+
+    // Runs cold adds −2°: feels like 8 + 2 for 8 km − 2 = 8
+    await openOutfit(page);
+    await expect(page.locator('#dressing-temp')).toHaveText('8°C');
+
+    await page.reload();
+    await expect(page.locator('#greeting')).toHaveText('Hello Brad!');
+  });
+
+  test('profile: an empty name isn\'t saved, and the old one comes back', async ({ page }) => {
+    await openSettings(page);
+    const name = page.getByRole('textbox', { name: 'Name' });
+    await name.fill('');
+    await name.blur();
+    await expect(page.locator('#settings-name-error')).toBeVisible();
+    await expect(name).toHaveValue('Bradley');
+    expect((await saved(page)).profile.name).toBe('Bradley');
+  });
+
+  test('what the app has learned, in plain words', async ({ page }) => {
+    await openSettings(page, { offsets: { running: 1.5, cycling: -0.5 } });
+    const rows = page.locator('#learned .learned-row');
+    await expect(rows.nth(0)).toContainText('Running · +1.5°C');
+    await expect(rows.nth(0)).toContainText('You run about 1.5 °C warmer than average');
+    await expect(rows.nth(1)).toContainText('Cycling · −0.5°C');
+    await expect(rows.nth(1)).toContainText('You ride about 0.5 °C cooler than average');
+    await expect(page.locator('#settings-screen')).toContainText('Each rating moves this by 0.5 °C, up to ±5 °C.');
+  });
+
+  test('Reset sets one activity\'s learned offset to 0, and the next outfit uses it', async ({ page }) => {
+    await openSettings(page, { offsets: { running: 1.5, cycling: 2 } });
+    const reset = page.getByRole('button', { name: 'Reset running to 0' });
+    expect((await reset.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await reset.click();
+    const rows = page.locator('#learned .learned-row');
+    await expect(rows.nth(0)).toContainText('Running · 0.0°C');
+    await expect(rows.nth(0)).toContainText('No adjustment yet');
+    await expect(rows.nth(1)).toContainText('Cycling · +2.0°C');
+    expect((await saved(page)).offsets).toEqual({ running: 0, cycling: 2 });
+
+    await page.getByRole('button', { name: 'Reset cycling to 0' }).click();
+    expect((await saved(page)).offsets).toEqual({ running: 0, cycling: 0 });
+
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    await openOutfit(page);
+    await expect(page.locator('#dressing-parts li').last()).toHaveText('Learned +0°');
+  });
+
+  test('rules of thumb: running and cycling tabs show the starting rules', async ({ page }) => {
+    await openSettings(page);
+    await expect(page.getByRole('radio', { name: 'Running' })).toBeChecked();
+    expect(await ruleRows(page)).toEqual([
+      'Vest 16°C and above', 'T-shirt 11 to 15°C', 'Long sleeve 6 to 10°C', 'Long sleeve + gilet 5°C and below',
+      'Shorts 8°C and above', 'Headband 4 to 8°C', 'Hat Below 4°C', 'Gloves Below 7°C',
+    ]);
+    await page.locator('#settings-screen').getByText('Cycling', { exact: true }).click();
+    expect(await ruleRows(page)).toEqual([
+      'Short sleeve 18°C and above', 'Short sleeve + base layer 13 to 17°C', 'Long sleeve + base layer 8 to 12°C',
+      'Long sleeve + gilet 7°C and below', 'Shorts 12°C and above', 'Buff Below 8°C', 'Gloves Below 10°C',
+    ]);
+    await expect(page.locator('#settings-screen')).toContainText('Temperatures are dressing temperatures. Tap a row to change it.');
+  });
+
+  test('rules of thumb: tap a row and change it; the outfit follows, and it\'s remembered', async ({ page }) => {
+    await openSettings(page);
+    await rule(page, 'Shorts').click();
+    const up = page.getByRole('button', { name: 'Shorts 1° warmer' });
+    for (const button of [up, page.getByRole('button', { name: 'Shorts 1° colder' })]) {
+      const box = await button.boundingBox();
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    await up.click();
+    await up.click();
+    await up.click();
+    await expect(rule(page, 'Shorts')).toContainText('11°C and above');
+    expect((await saved(page)).rules.running.shorts).toBe(11);
+
+    // Feels like 8 + 2 for 8 km = 10: shorts with the starting rules, tights now shorts start at 11
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    await openOutfit(page);
+    await expect(page.locator('#kit-lower')).toHaveText('Tights');
+
+    await page.reload();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(rule(page, 'Shorts')).toContainText('11°C and above');
+  });
+
+  test('rules of thumb: a row moves its neighbour, and can\'t go past it', async ({ page }) => {
+    await openSettings(page);
+    // Long sleeve + gilet is the other side of the long sleeve's number
+    await rule(page, 'Long sleeve + gilet').click();
+    await page.getByRole('button', { name: 'Long sleeve + gilet 1° colder' }).click();
+    await expect(rule(page, 'Long sleeve + gilet')).toContainText('4°C and below');
+    await expect(rule(page, 'Long sleeve')).toContainText('5 to 10°C');
+
+    // T-shirt can go up to 15, then it would meet the vest
+    await rule(page, 'T-shirt').click();
+    await expect(page.getByRole('button', { name: 'Long sleeve + gilet 1° colder' })).toHaveCount(0);
+    const up = page.getByRole('button', { name: 'T-shirt 1° warmer' });
+    for (let i = 0; i < 4; i++) await up.click();
+    await expect(rule(page, 'T-shirt')).toContainText('15°C');
+    await expect(rule(page, 'Long sleeve')).toContainText('5 to 14°C');
+    await expect(up).toBeDisabled();
+  });
+
+  test('rules of thumb: back to the starting rules, one activity at a time', async ({ page }) => {
+    await openSettings(page, {
+      rules: {
+        running: { vest: 18, tshirt: 11, longSleeve: 6, shorts: 10, headband: 8, hat: 4, gloves: 7 },
+        cycling: { shortSleeve: 18, baseLayer: 13, longSleeve: 8, shorts: 14, buff: 8, gloves: 10 },
+      },
+    });
+    await expect(rule(page, 'Vest')).toContainText('18°C and above');
+    await page.getByRole('button', { name: 'Back to the starting rules' }).click();
+    await expect(rule(page, 'Vest')).toContainText('16°C and above');
+    await expect(page.getByRole('button', { name: 'Back to the starting rules' })).toBeDisabled();
+    const data = await saved(page);
+    expect(data.rules.running.shorts).toBe(8);
+    expect(data.rules.cycling.shorts).toBe(14);
+  });
+
+  test('settings fit the screen and don\'t scroll sideways', async ({ page }) => {
+    await openSettings(page, { offsets: { running: -4.5, cycling: 5 } });
+    await rule(page, 'Long sleeve + gilet').click();
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
+    for (const button of await page.locator('#settings-screen button').all()) {
+      const box = await button.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
   });
 });

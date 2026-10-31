@@ -1,6 +1,8 @@
 // Checks the rules that decide what to wear, without opening the page.
 const { test, expect } = require('@playwright/test');
-const { recommend, dressingTemperature, startsChilly, learnFrom } = require('../clothing.js');
+const {
+  recommend, dressingTemperature, startsChilly, learnFrom, DEFAULT_RULES, checkRules, changeRule,
+} = require('../clothing.js');
 
 // Daylight, cool, grey, calm and dry: nothing extra from the weather
 const calm = { temperature: 10, cloudCover: 80, isDay: true, gusts: 20, rainChance: 0 };
@@ -335,5 +337,121 @@ test.describe('learning from feedback', () => {
     const feels7 = { feelsLike: 7, distance: 2 };
     expect(wear('running', dressing({ ...feels7, learnedOffset: 0 }).total)).toContain('Tights');
     expect(wear('running', dressing({ ...feels7, learnedOffset: learnFrom(0, 'hot') }).total)).toContain('Shorts');
+  });
+});
+
+test.describe('your rules of thumb', () => {
+  // The kit with your own rules, e.g. { running: { shorts: 10 } } on top of the starting ones
+  function wearWith(activity, dressingTemp, mine) {
+    const rules = checkRules({ ...DEFAULT_RULES, [activity]: { ...DEFAULT_RULES[activity], ...mine } });
+    const { items } = recommend({ activity, dressingTemp, weather: calm, rules });
+    return items.map((i) => i.item);
+  }
+
+  test('the starting rules match the spec', () => {
+    expect(DEFAULT_RULES).toEqual({
+      running: { vest: 16, tshirt: 11, longSleeve: 6, shorts: 8, headband: 8, hat: 4, gloves: 7 },
+      cycling: { shortSleeve: 18, baseLayer: 13, longSleeve: 8, shorts: 12, buff: 8, gloves: 10 },
+    });
+  });
+
+  test('leaving the rules out uses the starting ones', () => {
+    for (const t of [-3, 4, 5, 6, 7, 8, 10, 11, 15, 16]) {
+      expect(wear('running', t)).toEqual(wearWith('running', t, {}));
+      expect(wear('cycling', t + 2)).toEqual(wearWith('cycling', t + 2, {}));
+    }
+  });
+
+  test('running: moving shorts to 10 °C changes the boundary to 9 and 10', () => {
+    expect(wearWith('running', 9, { shorts: 10 })).toContain('Tights');
+    expect(wearWith('running', 10, { shorts: 10 })).toContain('Shorts');
+  });
+
+  test('running: each top uses your numbers, at the boundaries', () => {
+    const mine = { vest: 18, tshirt: 12, longSleeve: 4 };
+    expect(wearWith('running', 18, mine)).toContain('Vest');
+    expect(wearWith('running', 17, mine)).toContain('T-shirt');
+    expect(wearWith('running', 12, mine)).toContain('T-shirt');
+    expect(wearWith('running', 11, mine)).toContain('Long sleeve');
+    expect(wearWith('running', 4, mine)).not.toContain('Gilet');
+    expect(wearWith('running', 3, mine)).toContain('Gilet');
+  });
+
+  test('running: headband, hat and gloves use your numbers', () => {
+    const mine = { headband: 10, hat: 2, gloves: 5 };
+    expect(wearWith('running', 11, mine)).not.toContain('Headband');
+    expect(wearWith('running', 10, mine)).toContain('Headband');
+    expect(wearWith('running', 2, mine)).toContain('Headband');
+    expect(wearWith('running', 1, mine)).toContain('Hat');
+    expect(wearWith('running', 5, mine)).not.toContain('Gloves');
+    expect(wearWith('running', 4, mine)).toContain('Gloves');
+  });
+
+  test('cycling: tops, shorts, buff and gloves use your numbers', () => {
+    const mine = { shortSleeve: 20, baseLayer: 15, longSleeve: 6, shorts: 14, buff: 6, gloves: 12 };
+    expect(wearWith('cycling', 20, mine)).toEqual(['Short sleeve', 'Shorts']);
+    expect(wearWith('cycling', 19, mine)).toEqual(['Short sleeve', 'Base layer', 'Shorts']);
+    expect(wearWith('cycling', 14, mine)).toEqual(['Long sleeve', 'Base layer', 'Shorts']);
+    expect(wearWith('cycling', 12, mine)).toEqual(['Long sleeve', 'Base layer', 'Tights']);
+    expect(wearWith('cycling', 11, mine)).toEqual(['Long sleeve', 'Base layer', 'Tights', 'Gloves']);
+    expect(wearWith('cycling', 6, mine)).toEqual(['Long sleeve', 'Base layer', 'Tights', 'Gloves']);
+    expect(wearWith('cycling', 5, mine)).toEqual(['Long sleeve', 'Gilet', 'Tights', 'Buff', 'Gloves']);
+  });
+
+  test('the warm-up note uses your rules', () => {
+    // Feels like 6, easy 8 km (+2) → 8. With the starting rules, 8 loses the gloves and gets shorts: note.
+    const d = dressing({ feelsLike: 6, distance: 8 });
+    expect(startsChilly({ activity: 'running', dressing: d, weather: calm })).toBe(true);
+    // With shorts from 20 °C and gloves only below −20 °C, 6 and 8 give the same outfit: no note
+    const rules = checkRules({ ...DEFAULT_RULES, running: { ...DEFAULT_RULES.running, shorts: 20, gloves: -20 } });
+    expect(startsChilly({ activity: 'running', dressing: d, weather: calm, rules })).toBe(false);
+  });
+
+  test('changeRule moves one rule by a degree, without changing the old rules', () => {
+    const rules = checkRules(null);
+    const warmer = changeRule(rules, 'running', 'shorts', 1);
+    expect(warmer.running.shorts).toBe(9);
+    expect(rules.running.shorts).toBe(8);
+    expect(warmer.cycling).toEqual(DEFAULT_RULES.cycling);
+  });
+
+  test('changeRule keeps the tops in order, each with at least one degree', () => {
+    const rules = checkRules({ ...DEFAULT_RULES, running: { ...DEFAULT_RULES.running, tshirt: 15 } });
+    // T-shirt 15 and vest 16: neither can meet the other
+    expect(changeRule(rules, 'running', 'tshirt', 1)).toBeNull();
+    expect(changeRule(rules, 'running', 'vest', -1)).toBeNull();
+    expect(changeRule(rules, 'running', 'vest', 1).running.vest).toBe(17);
+    // Cycling: long sleeve can't reach the base layer
+    const close = checkRules({ ...DEFAULT_RULES, cycling: { ...DEFAULT_RULES.cycling, longSleeve: 12 } });
+    expect(changeRule(close, 'cycling', 'longSleeve', 1)).toBeNull();
+  });
+
+  test('changeRule: the headband can end where the hat starts, not below it', () => {
+    const rules = checkRules({ ...DEFAULT_RULES, running: { ...DEFAULT_RULES.running, headband: 5 } });
+    const same = changeRule(rules, 'running', 'headband', -1);
+    expect(same.running.headband).toBe(4);
+    expect(changeRule(same, 'running', 'headband', -1)).toBeNull();
+    expect(changeRule(same, 'running', 'hat', 1)).toBeNull();
+  });
+
+  test('changeRule stays between −20 and 40 °C', () => {
+    const low = checkRules({ ...DEFAULT_RULES, running: { ...DEFAULT_RULES.running, gloves: -20 } });
+    expect(changeRule(low, 'running', 'gloves', -1)).toBeNull();
+    const high = checkRules({ ...DEFAULT_RULES, cycling: { ...DEFAULT_RULES.cycling, shortSleeve: 40 } });
+    expect(changeRule(high, 'cycling', 'shortSleeve', 1)).toBeNull();
+  });
+
+  test('saved rules that are missing or don\'t make sense go back to the starting ones', () => {
+    expect(checkRules(undefined)).toEqual(DEFAULT_RULES);
+    expect(checkRules('nonsense')).toEqual(DEFAULT_RULES);
+    const broken = checkRules({
+      running: { ...DEFAULT_RULES.running, vest: 5 }, // vest below the T-shirt
+      cycling: { ...DEFAULT_RULES.cycling, gloves: 9.5 }, // not a whole number
+    });
+    expect(broken).toEqual(DEFAULT_RULES);
+    // A good activity is kept even when the other is broken
+    const half = checkRules({ running: { ...DEFAULT_RULES.running, shorts: 9 }, cycling: null });
+    expect(half.running.shorts).toBe(9);
+    expect(half.cycling).toEqual(DEFAULT_RULES.cycling);
   });
 });

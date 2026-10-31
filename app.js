@@ -1,5 +1,5 @@
 // Runs the page: finds your location, fetches the forecast and shows what to wear.
-// There are three screens: "Getting to know you" (first launch only), "Plan a session" and "Your outfit".
+// There are four screens: "Getting to know you" (first launch only), "Plan a session", "Your outfit" and "Settings".
 (function () {
   const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
   const PLACES_URL = 'https://geocoding-api.open-meteo.com/v1/search';
@@ -26,9 +26,11 @@
   // offsets: learned from your feedback, separate for running and cycling (°C)
   // ratings: every rating you've given, with its forecast, effort, distance and duration
   // outfits: recent outfits you haven't rated yet, so you can come back and rate them after the session
+  // rules: your rules of thumb, the dressing temperatures where each item starts (changed in Settings)
   const state = {
     activity: 'running', profile: null, location: null, weather: null, session: null,
     offsets: { running: 0, cycling: 0 }, ratings: [], outfits: [],
+    rules: window.Clothing.checkRules(null),
   };
   // Where the forecast on Your outfit is for, and the dressing temperature it gave
   let rated = null;
@@ -57,6 +59,7 @@
         }
       }
       if (Array.isArray(saved.ratings)) state.ratings = saved.ratings;
+      state.rules = window.Clothing.checkRules(saved.rules);
       if (Array.isArray(saved.outfits)) {
         // Forget outfits that finished too long ago to remember how they felt
         const tooOld = Date.now() - RATE_WITHIN_DAYS * 24 * 60 * 60 * 1000;
@@ -72,7 +75,7 @@
       const location = state.location && state.location.source === 'search' ? state.location : null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         activity: state.activity, profile: state.profile, location,
-        offsets: state.offsets, ratings: state.ratings, outfits: state.outfits,
+        offsets: state.offsets, ratings: state.ratings, outfits: state.outfits, rules: state.rules,
       }));
     } catch (e) { /* not remembered, but the page still works */ }
   }
@@ -91,9 +94,11 @@
   // Show one screen and hide the others, starting at the top of the page
   function showScreen(name) {
     el('profile-screen').hidden = name !== 'profile';
-    el('logo').hidden = name === 'outfit';
+    el('logo').hidden = name === 'outfit' || name === 'settings';
+    el('open-settings').hidden = name !== 'plan';
     el('plan-screen').hidden = name !== 'plan';
     el('outfit-screen').hidden = name !== 'outfit';
+    el('settings-screen').hidden = name !== 'settings';
     if (name === 'plan') showLastSession();
     window.scrollTo(0, 0);
   }
@@ -514,7 +519,7 @@
       rainChance: w.worstRainChance,
     };
     const { items } = window.Clothing.recommend({
-      activity: session.activity, dressingTemp: dressing.total, weather,
+      activity: session.activity, dressingTemp: dressing.total, weather, rules: state.rules,
     });
     // One card each, e.g. "Long sleeve + Gilet"
     for (const [id, area] of [['kit-upper', 'Upper body'], ['kit-lower', 'Lower body'], ['kit-accessories', 'Accessories']]) {
@@ -524,7 +529,7 @@
 
     // Notes, only the ones that apply
     const notes = [];
-    if (window.Clothing.startsChilly({ activity: session.activity, dressing, weather })) {
+    if (window.Clothing.startsChilly({ activity: session.activity, dressing, weather, rules: state.rules })) {
       notes.push({ kind: 'temperature', text: 'You\'ll start a little chilly, but you\'ll warm up as you go.' });
     }
     notes.push(...window.Weather.notes(w, session.time));
@@ -595,6 +600,7 @@
       warmth: state.profile ? state.profile.warmth : 'neutral',
       place: rated.place,
       dressingTemp: rated.dressing.total,
+      rules: state.rules[session.activity],
       forecast: state.weather,
       learnedBefore: before,
       learnedAfter: after,
@@ -640,6 +646,208 @@
     }
   }
 
+  // ---- Settings ----
+
+  const RULE_ACTIVITIES = ['running', 'cycling'];
+  // The rule row that's open to change, e.g. { activity: 'running', row: 1 }, or null
+  let openRule = null;
+
+  // "16°C and above", "11 to 15°C", "5°C and below", "Below 4°C"
+  const andAbove = (n) => `${wholeDegrees(n)}°C and above`;
+  const andBelow = (n) => `${wholeDegrees(n)}°C and below`;
+  const below = (n) => `Below ${wholeDegrees(n)}°C`;
+  const fromTo = (low, high) => (low === high ? `${wholeDegrees(low)}°C` : `${wholeDegrees(low)} to ${wholeDegrees(high)}°C`);
+
+  // Each row of the rules of thumb: the item, which rule it changes, and how it reads
+  const RULE_ROWS = {
+    running: [
+      { item: 'Vest', key: 'vest', text: (r) => andAbove(r.vest) },
+      { item: 'T-shirt', key: 'tshirt', text: (r) => fromTo(r.tshirt, r.vest - 1) },
+      { item: 'Long sleeve', key: 'longSleeve', text: (r) => fromTo(r.longSleeve, r.tshirt - 1) },
+      { item: 'Long sleeve + gilet', key: 'longSleeve', text: (r) => andBelow(r.longSleeve - 1) },
+      { item: 'Shorts', key: 'shorts', text: (r) => andAbove(r.shorts) },
+      { item: 'Headband', key: 'headband', text: (r) => fromTo(r.hat, r.headband) },
+      { item: 'Hat', key: 'hat', text: (r) => below(r.hat) },
+      { item: 'Gloves', key: 'gloves', text: (r) => below(r.gloves) },
+    ],
+    cycling: [
+      { item: 'Short sleeve', key: 'shortSleeve', text: (r) => andAbove(r.shortSleeve) },
+      { item: 'Short sleeve + base layer', key: 'baseLayer', text: (r) => fromTo(r.baseLayer, r.shortSleeve - 1) },
+      { item: 'Long sleeve + base layer', key: 'longSleeve', text: (r) => fromTo(r.longSleeve, r.baseLayer - 1) },
+      { item: 'Long sleeve + gilet', key: 'longSleeve', text: (r) => andBelow(r.longSleeve - 1) },
+      { item: 'Shorts', key: 'shorts', text: (r) => andAbove(r.shorts) },
+      { item: 'Buff', key: 'buff', text: (r) => below(r.buff) },
+      { item: 'Gloves', key: 'gloves', text: (r) => below(r.gloves) },
+    ],
+  };
+
+  // The cog on Plan a session opens Settings, as a step in the browser history so swiping back works
+  function openSettings() {
+    history.pushState({ screen: 'settings' }, '');
+    showSettings();
+    el('settings-heading').focus();
+  }
+
+  function showSettings() {
+    el('settings-name').value = state.profile ? state.profile.name : '';
+    el('settings-name-error').hidden = true;
+    el('settings-name').removeAttribute('aria-invalid');
+    for (const input of document.querySelectorAll('input[name="settings-warmth"]')) {
+      input.checked = input.value === (state.profile ? state.profile.warmth : 'neutral');
+    }
+    openRule = null;
+    showLearned();
+    showRules();
+    showScreen('settings');
+  }
+
+  // Name: saved as you type; an empty name isn't saved, and the old one comes back
+  function nameTyped() {
+    const name = el('settings-name').value.trim();
+    if (!name || !state.profile) return;
+    state.profile.name = name;
+    el('settings-name-error').hidden = true;
+    el('settings-name').removeAttribute('aria-invalid');
+    save();
+    showGreeting();
+  }
+
+  function nameDone() {
+    if (el('settings-name').value.trim() || !state.profile) return;
+    el('settings-name').value = state.profile.name;
+    el('settings-name-error').hidden = false;
+  }
+
+  // A learned offset as e.g. "+1.5°C", "−0.5°C" or "0.0°C"
+  function offsetText(n) {
+    const sign = n > 0 ? '+' : n < 0 ? '−' : '';
+    return `${sign}${Math.abs(n).toFixed(1)}°C`;
+  }
+
+  // What the app has learned, in plain words, with a Reset for each activity
+  function showLearned() {
+    el('learned').replaceChildren(...RULE_ACTIVITIES.map((activity) => {
+      const offset = state.offsets[activity];
+      const name = activity === 'cycling' ? 'Cycling' : 'Running';
+      const verb = activity === 'cycling' ? 'ride' : 'run';
+      const row = document.createElement('div');
+      row.className = 'learned-row';
+      const text = document.createElement('div');
+      const title = document.createElement('strong');
+      const value = document.createElement('span');
+      value.className = 'offset';
+      value.textContent = offsetText(offset);
+      title.append(`${name} · `, value);
+      const words = document.createElement('small');
+      words.textContent = offset === 0
+        ? 'No adjustment yet'
+        : `You ${verb} about ${Math.abs(offset)} °C ${offset > 0 ? 'warmer' : 'cooler'} than average`;
+      text.append(title, words);
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.className = 'button';
+      reset.textContent = 'Reset';
+      reset.setAttribute('aria-label', `Reset ${activity} to 0`);
+      reset.id = `reset-${activity}`;
+      reset.addEventListener('click', () => {
+        state.offsets[activity] = 0;
+        save();
+        showLearned();
+        el(`reset-${activity}`).focus();
+      });
+      row.append(text, reset);
+      return row;
+    }));
+  }
+
+  // Your rules of thumb for the chosen tab, one row per item. Tapping a row shows its − and +.
+  function showRules() {
+    const activity = checkedValue('rules-activity') || 'running';
+    const rules = state.rules[activity];
+    el('rules').replaceChildren(...RULE_ROWS[activity].map((row, i) => {
+      const li = document.createElement('li');
+      const open = openRule && openRule.activity === activity && openRule.row === i;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'rule-button';
+      button.id = `rule-${i}`;
+      button.setAttribute('aria-expanded', String(Boolean(open)));
+      const item = document.createElement('span');
+      item.textContent = row.item;
+      const value = document.createElement('span');
+      value.textContent = row.text(rules);
+      button.append(item, value);
+      button.addEventListener('click', () => {
+        openRule = open ? null : { activity, row: i };
+        showRules();
+        el(`rule-${i}`).focus();
+      });
+      li.append(button);
+      if (open) li.append(ruleEditor(activity, row, i));
+      return li;
+    }));
+    // Starting rules already? Then there's nothing to go back to
+    const starting = window.Clothing.DEFAULT_RULES[activity];
+    el('reset-rules').disabled = Object.keys(starting).every((k) => starting[k] === rules[k]);
+  }
+
+  // The − and + under an open rule: 1 °C at a time, greyed out where the rules would go out of order
+  function ruleEditor(activity, row, i) {
+    const editor = document.createElement('div');
+    editor.className = 'rule-editor';
+    editor.setAttribute('role', 'group');
+    editor.setAttribute('aria-label', `Change ${row.item}`);
+    for (const [step, sign, words, id] of [[-1, '−', 'colder', 'rule-down'], [1, '+', 'warmer', 'rule-up']]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'step-button';
+      button.id = id;
+      button.textContent = sign;
+      button.setAttribute('aria-label', `${row.item} 1° ${words}`);
+      const changed = window.Clothing.changeRule(state.rules, activity, row.key, step);
+      button.disabled = !changed;
+      button.addEventListener('click', () => {
+        if (!changed) return;
+        state.rules = changed;
+        save();
+        showRules();
+        // Keep your place: stay on the same button, or the row if that button is now greyed out
+        const again = el(id);
+        (again && !again.disabled ? again : el(`rule-${i}`)).focus();
+      });
+      editor.append(button);
+    }
+    return editor;
+  }
+
+  function initSettings() {
+    el('open-settings').addEventListener('click', openSettings);
+    el('settings-back').addEventListener('click', () => history.back());
+    el('settings-name').addEventListener('input', nameTyped);
+    el('settings-name').addEventListener('change', nameDone);
+    for (const input of document.querySelectorAll('input[name="settings-warmth"]')) {
+      input.addEventListener('change', () => {
+        if (!state.profile) return;
+        state.profile.warmth = input.value;
+        save();
+      });
+    }
+    for (const input of document.querySelectorAll('input[name="rules-activity"]')) {
+      input.addEventListener('change', () => {
+        openRule = null;
+        showRules();
+      });
+    }
+    el('reset-rules').addEventListener('click', () => {
+      const activity = checkedValue('rules-activity') || 'running';
+      state.rules = { ...state.rules, [activity]: { ...window.Clothing.DEFAULT_RULES[activity] } };
+      openRule = null;
+      save();
+      showRules();
+      el('rule-0').focus();
+    });
+  }
+
   function init() {
     load();
 
@@ -659,15 +867,7 @@
       input.checked = input.value === warmth;
     }
     el('profile-screen').addEventListener('submit', saveProfile);
-    // Until Settings exists, "Change your details" reopens Getting to know you with your answers filled in
-    el('edit-profile').addEventListener('click', () => {
-      el('name').value = state.profile ? state.profile.name : '';
-      for (const input of document.querySelectorAll('input[name="warmth"]')) {
-        input.checked = input.value === (state.profile ? state.profile.warmth : 'neutral');
-      }
-      showScreen('profile');
-      el('name').focus();
-    });
+    initSettings();
     el('name').addEventListener('input', () => {
       if (el('name').value.trim()) {
         el('name-error').hidden = true;
@@ -707,7 +907,9 @@
     // The back arrow does the same as the browser's back, so both end up in the same place
     el('back').addEventListener('click', () => history.back());
     window.addEventListener('popstate', (event) => {
-      showScreen(event.state && event.state.screen === 'outfit' ? 'outfit' : 'plan');
+      const screen = event.state && event.state.screen;
+      if (screen === 'settings') showSettings();
+      else showScreen(screen === 'outfit' ? 'outfit' : 'plan');
     });
     // Open on Getting to know you the first time, then always on Plan a session, even after a reload
     history.replaceState(null, '');

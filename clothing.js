@@ -55,39 +55,96 @@
     return { ...parts, exact, total };
   }
 
-  // Running, from the dressing temperature (°C) and the worst gusts of the session (km/h)
-  function runningKit(t, gusts) {
-    const upper = [];
-    if (t >= 16) upper.push('Vest');
-    else if (t >= 11) upper.push('T-shirt');
-    else upper.push('Long sleeve');
-    // Gilet at 5 or below, or when it's gusty and below 12
-    if (t <= 5 || (gusts !== null && gusts >= GUSTY && t < GILET_GUSTS_BELOW)) upper.push('Gilet');
+  // Your rules of thumb: the dressing temperatures (°C) where each item starts.
+  // These are the starting values; you can change them in Settings.
+  const DEFAULT_RULES = {
+    running: {
+      vest: 16, // Vest from here up
+      tshirt: 11, // T-shirt from here up to just below the vest
+      longSleeve: 6, // Long sleeve from here up to just below the T-shirt; below it, long sleeve + gilet
+      shorts: 8, // Shorts from here up; tights below
+      headband: 8, // Headband from the hat's number up to here
+      hat: 4, // Hat below this
+      gloves: 7, // Gloves below this
+    },
+    cycling: {
+      shortSleeve: 18, // Short sleeve from here up
+      baseLayer: 13, // Short sleeve + base layer from here up to just below short sleeve
+      longSleeve: 8, // Long sleeve + base layer from here up; below it, long sleeve + gilet
+      shorts: 12, // Shorts from here up; tights below
+      buff: 8, // Buff below this
+      gloves: 10, // Gloves below this
+    },
+  };
 
-    const lower = [t >= 8 ? 'Shorts' : 'Tights'];
+  // Rules that have to stay in order, as [higher, lower, smallest gap]:
+  // each top needs at least one degree of its own, and the headband can't end below where the hat starts
+  const RULE_ORDER = {
+    running: [['vest', 'tshirt', 1], ['tshirt', 'longSleeve', 1], ['headband', 'hat', 0]],
+    cycling: [['shortSleeve', 'baseLayer', 1], ['baseLayer', 'longSleeve', 1]],
+  };
+  // Rules of thumb stay between these dressing temperatures (°C)
+  const RULE_MIN = -20;
+  const RULE_MAX = 40;
+
+  // True when one activity's rules are all whole numbers, in range and in order
+  function rulesMakeSense(activity, rules) {
+    if (!rules || typeof rules !== 'object') return false;
+    const keys = Object.keys(DEFAULT_RULES[activity]);
+    if (!keys.every((k) => Number.isInteger(rules[k]) && rules[k] >= RULE_MIN && rules[k] <= RULE_MAX)) return false;
+    return RULE_ORDER[activity].every(([high, low, gap]) => rules[high] - rules[low] >= gap);
+  }
+
+  // Your saved rules, or the starting ones for any activity whose saved rules are missing or don't make sense
+  function checkRules(saved) {
+    const rules = {};
+    for (const activity of ['running', 'cycling']) {
+      const mine = saved && saved[activity];
+      rules[activity] = rulesMakeSense(activity, mine) ? { ...mine } : { ...DEFAULT_RULES[activity] };
+    }
+    return rules;
+  }
+
+  // Moves one rule up or down by step degrees. Returns the new rules, or null if that would
+  // put the rules out of order or out of range (so the button can be greyed out).
+  function changeRule(rules, activity, key, step) {
+    const changed = { ...rules, [activity]: { ...rules[activity], [key]: rules[activity][key] + step } };
+    return rulesMakeSense(activity, changed[activity]) ? changed : null;
+  }
+
+  // Running, from the dressing temperature (°C), the worst gusts of the session (km/h) and your rules
+  function runningKit(t, gusts, r) {
+    const upper = [];
+    if (t >= r.vest) upper.push('Vest');
+    else if (t >= r.tshirt) upper.push('T-shirt');
+    else upper.push('Long sleeve');
+    // Gilet below the long sleeve's number, or when it's gusty and below 12
+    if (t < r.longSleeve || (gusts !== null && gusts >= GUSTY && t < GILET_GUSTS_BELOW)) upper.push('Gilet');
+
+    const lower = [t >= r.shorts ? 'Shorts' : 'Tights'];
 
     const accessories = [];
-    if (t < 4) accessories.push('Hat');
-    else if (t <= 8) accessories.push('Headband');
-    if (t < 7) accessories.push('Gloves');
+    if (t < r.hat) accessories.push('Hat');
+    else if (t <= r.headband) accessories.push('Headband');
+    if (t < r.gloves) accessories.push('Gloves');
     return { upper, lower, accessories };
   }
 
-  // Cycling, from the dressing temperature (°C, after cycling chill) and the worst rain chance (%)
-  function cyclingKit(t, rainChance) {
+  // Cycling, from the dressing temperature (°C, after cycling chill), the worst rain chance (%) and your rules
+  function cyclingKit(t, rainChance, r) {
     let upper;
-    if (t >= 18) upper = ['Short sleeve'];
-    else if (t >= 13) upper = ['Short sleeve', 'Base layer'];
-    else if (t >= 8) upper = ['Long sleeve', 'Base layer'];
+    if (t >= r.shortSleeve) upper = ['Short sleeve'];
+    else if (t >= r.baseLayer) upper = ['Short sleeve', 'Base layer'];
+    else if (t >= r.longSleeve) upper = ['Long sleeve', 'Base layer'];
     else upper = ['Long sleeve', 'Gilet'];
     // Waterproof whatever the temperature
     if (rainChance !== null && rainChance >= RAIN_LIKELY) upper.push('Waterproof jacket');
 
-    const lower = [t >= 12 ? 'Shorts' : 'Tights'];
+    const lower = [t >= r.shorts ? 'Shorts' : 'Tights'];
 
     const accessories = [];
-    if (t < 8) accessories.push('Buff');
-    if (t < 10) accessories.push('Gloves');
+    if (t < r.buff) accessories.push('Buff');
+    if (t < r.gloves) accessories.push('Gloves');
     return { upper, lower, accessories };
   }
 
@@ -105,12 +162,15 @@
   // dressingTemp: from dressingTemperature (°C)
   // weather: at the start hour { temperature (°C), cloudCover (%), isDay (true/false) },
   //   and the worst hour of the session { gusts (km/h), rainChance (%) }. A gap in the forecast is null.
+  // rules: your rules of thumb (see DEFAULT_RULES); the starting ones if left out
   // Returns { items: [{ area, item }] }, grouped as Upper body, Lower body, Accessories
-  function recommend({ activity, dressingTemp, weather }) {
+  function recommend({ activity, dressingTemp, weather, rules = DEFAULT_RULES }) {
     const t = dressingTemp;
     const gusts = weather.gusts ?? null;
     const rainChance = weather.rainChance ?? null;
-    const kit = activity === 'cycling' ? cyclingKit(t, rainChance) : runningKit(t, gusts);
+    const kit = activity === 'cycling'
+      ? cyclingKit(t, rainChance, rules.cycling)
+      : runningKit(t, gusts, rules.running);
     kit.accessories.push(...sunItems(weather));
 
     const items = [];
@@ -122,11 +182,11 @@
 
   // True when distance or effort has made the outfit lighter than the weather alone would:
   // you'll start a little chilly, but warm up as you go.
-  // dressing: from dressingTemperature. weather: as for recommend.
-  function startsChilly({ activity, dressing, weather }) {
+  // dressing: from dressingTemperature. weather and rules: as for recommend.
+  function startsChilly({ activity, dressing, weather, rules = DEFAULT_RULES }) {
     if (dressing.effort + dressing.distance <= 0) return false;
     const without = Math.round(dressing.exact - dressing.effort - dressing.distance) || 0;
-    const outfit = (t) => JSON.stringify(recommend({ activity, dressingTemp: t, weather }).items);
+    const outfit = (t) => JSON.stringify(recommend({ activity, dressingTemp: t, weather, rules }).items);
     return outfit(without) !== outfit(dressing.total);
   }
 
@@ -144,7 +204,10 @@
     return capped || 0;
   }
 
-  const api = { recommend, dressingTemperature, startsChilly, learnFrom, OFFSET_LIMIT };
+  const api = {
+    recommend, dressingTemperature, startsChilly, learnFrom, OFFSET_LIMIT,
+    DEFAULT_RULES, checkRules, changeRule,
+  };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else {
