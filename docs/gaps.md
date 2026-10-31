@@ -28,7 +28,7 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 - [ ] 2. No separate "Plan a session" screen; everything is on one page.
 - [ ] 3. No "Your outfit" result screen with a back arrow and summary line (e.g. "Wed 28 Oct · 07:00 · Easy 8 km run").
 - [ ] 4. No Settings screen or settings cog.
-- [ ] 5. The logo image and tagline aren't shown; the page uses a purple text heading instead.
+- [x] 5. The logo image and tagline aren't shown; the page uses a purple text heading instead.
 - [ ] 6. No "Hello Bradley" greeting.
 
 ## Session inputs
@@ -81,9 +81,9 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 ## Design
 
-- [ ] 37. Colours are close but not exact: cards #18181F (should be #18181D), borders #2A2A35 (#26262D), text #ECECF1 (#F4F4F6), secondary text #9A9AA8 (#A6A6B0), accent text #A78BFA (#C4A7FF); hover #6D28D9 and selected tint #231B36 aren't used.
+- [x] 37. Colours are close but not exact: cards #18181F (should be #18181D), borders #2A2A35 (#26262D), text #ECECF1 (#F4F4F6), secondary text #9A9AA8 (#A6A6B0), accent text #A78BFA (#C4A7FF); hover #6D28D9 and selected tint #231B36 aren't used.
 - [ ] 38. Some buttons are smaller than 44 px to tap (e.g. "Change", the choice buttons).
-- [ ] 39. Font order is Carlito then Calibri; the spec says Calibri first, Carlito as the fallback.
+- [x] 39. Font order is Carlito then Calibri; the spec says Calibri first, Carlito as the fallback.
 
 ## Home screen and housekeeping
 
