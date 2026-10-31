@@ -551,15 +551,34 @@
     }
 
     /* Weather and what to wear */
-    #temperature {
-      font-size: 3rem;
-      font-weight: 700;
-      line-height: 1;
+    /* The six weather readings, three to a row */
+    .readings-card {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 20px 16px;
     }
 
-    #conditions {
+    .readings {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px 12px;
+    }
+
+    .readings dt {
       color: var(--muted);
-      margin-top: 6px;
+      font-size: 0.9rem;
+    }
+
+    .readings dd {
+      font-weight: 700;
+      font-size: 1.15rem;
+      overflow-wrap: anywhere;
+    }
+
+    #place-note {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 10px;
     }
 
     #kit-heading {
@@ -747,10 +766,17 @@
       <p id="weather-status" role="status" hidden></p>
 
       <section id="results" aria-label="Weather and what to wear" hidden>
-        <div>
-          <p id="temperature"></p>
-          <p id="conditions"></p>
+        <div class="readings-card">
+          <dl class="readings" aria-label="Weather at the start">
+            <div><dt>Temp</dt><dd id="reading-temperature"></dd></div>
+            <div><dt>Wind km/h</dt><dd id="reading-wind"></dd></div>
+            <div><dt>Rain</dt><dd id="reading-rain"></dd></div>
+            <div><dt>Sky</dt><dd id="reading-sky"></dd></div>
+            <div><dt>Humidity</dt><dd id="reading-humidity"></dd></div>
+            <div><dt>Light</dt><dd id="reading-light"></dd></div>
+          </dl>
         </div>
+        <p id="place-note" hidden></p>
         <h2 id="kit-heading" tabindex="-1">Your outfit</h2>
         <ul id="kit"></ul>
       </section>
@@ -761,6 +787,7 @@
     </footer>
   </main>
 
+  <script src="weather.js"></script>
   <script src="clothing.js"></script>
   <script src="app.js"></script>
 </body>

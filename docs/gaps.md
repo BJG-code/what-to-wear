@@ -48,12 +48,12 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 ## Weather
 
-- [ ] 16. Uses the current weather (plus the highest rain chance over the next 3 hours), not the hourly forecast for the chosen day, time and duration.
-- [ ] 17. Doesn't fetch gusts, humidity or cloud cover.
-- [ ] 18. Shows a one-line summary instead of the six readings (temp, wind + gust, rain, sky, humidity, light).
+- [x] 16. Uses the current weather (plus the highest rain chance over the next 3 hours), not the hourly forecast for the chosen day, time and duration.
+- [x] 17. Doesn't fetch gusts, humidity or cloud cover.
+- [x] 18. Shows a one-line summary instead of the six readings (temp, wind + gust, rain, sky, humidity, light).
 - [ ] 19. No notes about weather changing during the session.
-- [ ] 20. If location is refused, it asks you to search for a town; the spec says use central London and say so.
-- [ ] 21. Town search and the remembered holiday location aren't in the spec (saved locations are a later idea). Decide: remove, or keep as an extra.
+- [x] 20. If location is refused, it asks you to search for a town; the spec says use central London and say so.
+- [x] 21. Town search and the remembered holiday location aren't in the spec (saved locations are a later idea). Decide: remove, or keep as an extra. Decided 31 Oct 2026: keep it, and added to the spec.
 
 ## Outfit rules
 

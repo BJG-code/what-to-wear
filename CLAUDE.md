@@ -18,6 +18,7 @@ A personal app for Bradley that says exactly what to wear for a run or bike ride
 
 - `index.html`: the page and its styling
 - `app.js`: location, weather and showing the results
+- `weather.js`: picks the session's hours out of the forecast and turns them into the six readings, kept separate so it can be tested on its own
 - `clothing.js`: the outfit rules, kept separate so they can be tested on their own
 - `tests/`: automated checks (Playwright)
 - `assets/logo.png`: the logo
@@ -53,6 +54,7 @@ One call to Open-Meteo's hourly forecast for the phone's GPS position (free, no 
 - Dressing temperature and readings use the hour nearest the start time.
 - Every hour from start to finish (start + duration) is checked; rain and gust notes and the cycling waterproof use the worst hour.
 - Location refused or unavailable: use central London and say so.
+- You can also search for a town instead; it's remembered until you switch back to your own location.
 - Forecast won't load: say so plainly and show no outfit.
 
 ## Dressing temperature

@@ -1,20 +1,14 @@
-// Runs the page: finds your location, fetches the weather and shows what to wear.
+// Runs the page: finds your location, fetches the forecast and shows what to wear.
 // There are three screens: "Getting to know you" (first launch only), "Plan a session" and "Your outfit".
 (function () {
   const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
   const PLACES_URL = 'https://geocoding-api.open-meteo.com/v1/search';
   const STORAGE_KEY = 'what-to-wear';
 
-  // Weather codes from Open-Meteo, in plain English
-  const WEATHER_TEXT = {
-    0: 'Clear sky', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast',
-    45: 'Fog', 48: 'Freezing fog',
-    51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle', 56: 'Freezing drizzle', 57: 'Freezing drizzle',
-    61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 66: 'Freezing rain', 67: 'Freezing rain',
-    71: 'Light snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains',
-    80: 'Light showers', 81: 'Showers', 82: 'Heavy showers', 85: 'Snow showers', 86: 'Heavy snow showers',
-    95: 'Thunderstorm', 96: 'Thunderstorm with hail', 99: 'Thunderstorm with hail',
-  };
+  // Used when the phone can't or won't share its location
+  const CENTRAL_LONDON = { name: 'Central London', latitude: 51.5074, longitude: -0.1278, source: 'london' };
+  // Forecast days to ask for: today plus 5, and one more for a session that runs past midnight
+  const FORECAST_DAYS = 7;
 
   const el = (id) => document.getElementById(id);
   const WARMTH = ['hot', 'neutral', 'cold'];
@@ -28,6 +22,8 @@
   const state = { activity: 'running', profile: null, location: null, weather: null, session: null };
   // A runs hot / cold choice saved by the old version of the app, used to pre-tick the new one
   let oldWarmth = null;
+  // Counts forecast requests, so an old answer arriving late is ignored
+  let weatherRequest = 0;
 
   // Remember choices on this device. Wrapped in try/catch because private browsing can block storage.
   function load() {
@@ -194,6 +190,8 @@
     return {
       activity: state.activity,
       start: new Date(y, m - 1, d, hours, minutes),
+      // The same start as text, e.g. "2026-10-28T07:00", to find in the forecast
+      startText: `${checkedValue('day')}T${time}`,
       time,
       distance: Math.round(readNumber(el('distance'), 500) * 10) / 10,
       duration: Math.round(readNumber(el('duration'), 1440)),
@@ -233,6 +231,7 @@
     history.pushState({ screen: 'outfit' }, '');
     showScreen('outfit');
     el('back').focus();
+    fetchWeather();
   }
 
   function showSearch(show) {
@@ -241,11 +240,15 @@
     if (show) el('place').focus();
   }
 
+  // No location from the phone: use central London and say so. You can still pick a town with "Change".
+  function useLondon() {
+    setStatus('We couldn\'t get your location, so we\'re using central London. Tap Change to pick a town.');
+    setLocation(CENTRAL_LONDON, { keepStatus: true });
+  }
+
   function useDeviceLocation() {
     if (!navigator.geolocation) {
-      el('location-name').textContent = 'No location set';
-      setStatus('Your browser can\'t share your location. Search for a town instead.');
-      showSearch(true);
+      useLondon();
       return;
     }
     el('location-name').textContent = 'Finding your location…';
@@ -259,70 +262,88 @@
           source: 'device',
         });
       },
-      () => {
-        el('location-name').textContent = 'No location set';
-        setStatus('We couldn\'t get your location. Search for a town instead.');
-        showSearch(true);
-      },
+      useLondon,
       { timeout: 10000, maximumAge: 10 * 60 * 1000 }
     );
   }
 
-  function setLocation(location) {
+  function setLocation(location, { keepStatus = false } = {}) {
     state.location = location;
     save();
     el('location-name').textContent = location.name;
+    if (!keepStatus) setStatus('');
     showSearch(false);
-    fetchWeather();
+    // If Your outfit is waiting for a location, get its forecast now
+    if (!el('outfit-screen').hidden) fetchWeather();
   }
 
+  // One call to Open-Meteo for the hourly forecast, then picks out the hours of your session
   async function fetchWeather() {
+    const session = state.session;
+    el('results').hidden = true;
+    el('place-note').hidden = true;
+    state.weather = null;
+    if (!session) return;
+    if (!state.location) {
+      setWeatherStatus('Finding your location…');
+      return;
+    }
+    const request = ++weatherRequest;
     const { latitude, longitude } = state.location;
     const params = new URLSearchParams({
       latitude, longitude,
-      current: 'temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day',
-      hourly: 'precipitation_probability',
-      forecast_hours: '3',
+      hourly: window.Weather.HOURLY_FIELDS.join(','),
       wind_speed_unit: 'kmh',
       timezone: 'auto',
+      forecast_days: String(FORECAST_DAYS),
     });
-    el('results').hidden = true;
-    setWeatherStatus('Checking the weather…');
+    setWeatherStatus('Checking the forecast…');
+    let forecast;
     try {
       const response = await fetch(`${WEATHER_URL}?${params}`);
       if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
       const data = await response.json();
-      const rainChances = (data.hourly && data.hourly.precipitation_probability) || [];
-      state.weather = {
-        temperature: data.current.temperature_2m,
-        feelsLike: data.current.apparent_temperature,
-        windSpeed: data.current.wind_speed_10m,
-        rainChance: Math.max(0, ...rainChances.filter((n) => typeof n === 'number')),
-        isDay: data.current.is_day === 1,
-        sunny: data.current.weather_code <= 1,
-        description: WEATHER_TEXT[data.current.weather_code] || '',
-      };
-      setWeatherStatus('');
-      render();
+      if (request !== weatherRequest) return;
+      forecast = window.Weather.forSession(data, session.startText, session.duration);
     } catch (e) {
-      state.weather = null;
-      setWeatherStatus('Couldn\'t get the weather right now. Check your connection and try again.');
+      if (request !== weatherRequest) return;
+      setWeatherStatus('Couldn\'t get the forecast right now. Check your connection and try again.');
+      return;
     }
+    if (!forecast) {
+      setWeatherStatus('There\'s no forecast for that day and time yet. Try again later.');
+      return;
+    }
+    state.weather = forecast;
+    setWeatherStatus('');
+    render();
   }
 
   function render() {
-    if (!state.weather) return;
+    if (!state.weather || !state.session) return;
     const w = state.weather;
-    el('temperature').textContent = `${Math.round(w.temperature)}°C`;
-    el('conditions').textContent = [
-      w.description,
-      `Feels like ${Math.round(w.feelsLike)}°C`,
-      `Wind ${Math.round(w.windSpeed)} km/h`,
-      `Rain chance ${Math.round(w.rainChance)}%`,
-    ].filter(Boolean).join(' · ');
+    const shown = window.Weather.readings(w.start);
+    el('reading-temperature').textContent = shown.temperature;
+    el('reading-wind').textContent = shown.wind;
+    el('reading-rain').textContent = shown.rain;
+    el('reading-sky').textContent = shown.sky;
+    el('reading-humidity').textContent = shown.humidity;
+    el('reading-light').textContent = shown.light;
+    el('place-note').textContent = state.location.source === 'london'
+      ? 'Forecast for central London, as we couldn\'t get your location.'
+      : `Forecast for ${state.location.source === 'search' ? state.location.name : 'where you are now'}.`;
+    el('place-note').hidden = false;
 
+    // Until the new outfit rules arrive, the rain chance is the worst hour of the session
+    const weather = {
+      feelsLike: w.start.feelsLike,
+      windSpeed: w.start.windSpeed || 0,
+      rainChance: w.worstRainChance || 0,
+      isDay: w.start.isDay,
+      sunny: w.start.cloudCover !== null && w.start.cloudCover <= window.Weather.SUNNY_CLOUD,
+    };
     const { items } = window.Clothing.recommend({
-      activity: state.activity, preference: state.profile ? state.profile.warmth : 'neutral', weather: w,
+      activity: state.session.activity, preference: state.profile ? state.profile.warmth : 'neutral', weather,
     });
     const list = el('kit');
     list.replaceChildren(...items.map(({ area, item }) => {
@@ -382,7 +403,6 @@
         state.activity = input.value;
         save();
         fillDuration();
-        render();
       });
     }
 

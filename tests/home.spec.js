@@ -5,17 +5,39 @@ const { test, expect } = require('@playwright/test');
 
 const LONDON = { latitude: 51.5, longitude: -0.12 };
 
-// A cool, dry, calm morning: 10°C, feels like 8°C
-const sampleWeather = {
-  current: {
-    temperature_2m: 10.2,
-    apparent_temperature: 8.1,
-    weather_code: 2,
-    wind_speed_10m: 12,
-    is_day: 1,
-  },
-  hourly: { precipitation_probability: [10, 15, 5] },
-};
+const CENTRAL_LONDON = { latitude: '51.5074', longitude: '-0.1278' };
+
+// A sample hourly forecast, like Open-Meteo's, covering every day the checks might pick.
+// Every hour is cool, dry and cloudy (10°C, feels like 8°C), light from 07:00 to 17:00,
+// unless change(time) returns different values for that hour, e.g. { precipitation_probability: 60 }.
+function hourlyForecast(change = () => ({})) {
+  const hourly = {
+    time: [], temperature_2m: [], apparent_temperature: [], wind_speed_10m: [], wind_gusts_10m: [],
+    precipitation_probability: [], cloud_cover: [], is_day: [], relative_humidity_2m: [],
+  };
+  const first = Date.UTC(2026, 9, 25);
+  const last = Date.now() + 10 * 24 * 60 * 60 * 1000;
+  for (let t = first; t < last; t += 60 * 60 * 1000) {
+    const time = new Date(t).toISOString().slice(0, 16);
+    const hour = new Date(t).getUTCHours();
+    const values = {
+      temperature_2m: 10.2,
+      apparent_temperature: 8.1,
+      wind_speed_10m: 12,
+      wind_gusts_10m: 25,
+      precipitation_probability: 10,
+      cloud_cover: 80,
+      is_day: hour >= 7 && hour <= 17 ? 1 : 0,
+      relative_humidity_2m: 82,
+      ...change(time),
+    };
+    hourly.time.push(time);
+    for (const [field, value] of Object.entries(values)) hourly[field].push(value);
+  }
+  return { hourly };
+}
+
+const sampleWeather = hourlyForecast();
 
 const samplePlaces = {
   results: [
@@ -45,16 +67,18 @@ async function withProfile(page, profile = { name: 'Bradley', warmth: 'neutral' 
 }
 
 // Fills in the session: today, 07:00, 8 km, Easy (unless told otherwise)
-async function fillSession(page, { time = '07:00', distance = '8', effort = 'Easy' } = {}) {
-  await page.locator('#days label').first().click();
+async function fillSession(page, { day, time = '07:00', distance = '8', duration, effort = 'Easy' } = {}) {
+  if (day) await page.getByRole('radio', { name: day }).check({ force: true });
+  else await page.locator('#days label').first().click();
   await page.getByLabel('Start time').fill(time);
   await page.getByRole('spinbutton', { name: 'Distance' }).fill(distance);
+  if (duration) await page.getByRole('spinbutton', { name: 'Duration' }).fill(duration);
   await page.locator('.efforts').getByText(effort, { exact: true }).click();
 }
 
 // Fills in the session, then taps "What should I wear?" to go from Plan a session to Your outfit
-async function openOutfit(page) {
-  await fillSession(page);
+async function openOutfit(page, session) {
+  await fillSession(page, session);
   await page.getByRole('button', { name: 'What should I wear?' }).click();
   await expect(page.locator('#outfit-screen')).toBeVisible();
 }
@@ -72,17 +96,96 @@ test.describe('with location allowed', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName('What to wear');
   });
 
-  test('uses your current location and shows the weather', async ({ page }) => {
+  test('uses your current location and shows the six readings', async ({ page }) => {
     const requests = await mockServices(page);
     await page.goto('/');
     await expect(page.locator('#location-name')).toHaveText('Your current location');
+    // The forecast is fetched once the session is planned, not before
+    expect(requests).toHaveLength(0);
     await openOutfit(page);
-    await expect(page.locator('#temperature')).toHaveText('10°C');
-    await expect(page.locator('#conditions')).toHaveText(
-      'Partly cloudy · Feels like 8°C · Wind 12 km/h · Rain chance 15%'
-    );
+    await expect(page.locator('.readings > div')).toHaveText([
+      'Temp10°C', 'Wind km/h12 · gust 25', 'Rain10%', 'SkyCloudy', 'Humidity82%', 'LightDaylight',
+    ]);
+    await expect(page.locator('#place-note')).toHaveText('Forecast for where you are now.');
+    expect(requests).toHaveLength(1);
     expect(requests[0].searchParams.get('latitude')).toBe('51.5');
     expect(requests[0].searchParams.get('longitude')).toBe('-0.12');
+  });
+
+  test('asks Open-Meteo for the hourly forecast with all eight measures, in km/h', async ({ page }) => {
+    const requests = await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page);
+    await expect.poll(() => requests.length).toBe(1);
+    const params = requests[0].searchParams;
+    expect(params.get('hourly').split(',').sort()).toEqual([
+      'apparent_temperature', 'cloud_cover', 'is_day', 'precipitation_probability',
+      'relative_humidity_2m', 'temperature_2m', 'wind_gusts_10m', 'wind_speed_10m',
+    ]);
+    expect(params.get('current')).toBeNull();
+    expect(params.get('wind_speed_unit')).toBe('kmh');
+    expect(params.get('timezone')).toBe('auto');
+    expect(params.get('forecast_days')).toBe('7');
+  });
+
+  test('reads the forecast for the chosen day and the hour nearest the start time', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-28T07:00:00Z'));
+    // Only Friday at 18:00 is warm, sunny-but-dark and windy; everything else is the usual cool and cloudy
+    await mockServices(page, {
+      weather: hourlyForecast((time) => (time === '2026-10-30T18:00' ? {
+        temperature_2m: 14.6, wind_speed_10m: 20.4, wind_gusts_10m: 41, precipitation_probability: 35,
+        cloud_cover: 20, is_day: 0, relative_humidity_2m: 64,
+      } : {})),
+    });
+    await page.goto('/');
+    await openOutfit(page, { day: 'Friday 30 October', time: '17:45' });
+    await expect(page.locator('.readings > div')).toHaveText([
+      'Temp15°C', 'Wind km/h20 · gust 41', 'Rain35%', 'SkyClear', 'Humidity64%', 'LightDark',
+    ]);
+
+    // 17:29 is nearer 17:00, which is the usual weather
+    await page.goBack();
+    await page.getByLabel('Start time').fill('17:29');
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#reading-temperature')).toHaveText('10°C');
+    await expect(page.locator('#reading-light')).toHaveText('Daylight');
+  });
+
+  test('shows sunny skies when cloud cover is 30% or less in daylight', async ({ page }) => {
+    await mockServices(page, { weather: hourlyForecast(() => ({ cloud_cover: 30 })) });
+    await page.goto('/');
+    await openOutfit(page);
+    await expect(page.locator('#reading-sky')).toHaveText('Sunny');
+  });
+
+  test('rain during the session uses the worst hour, from start to finish', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-28T06:00:00Z'));
+    // Rain is likely at 08:00 only
+    await mockServices(page, {
+      weather: hourlyForecast((time) => (time === '2026-10-28T08:00' ? { precipitation_probability: 60 } : {})),
+    });
+    await page.goto('/');
+    // 07:00 for 48 minutes ends nearest 08:00, so the rain counts
+    await openOutfit(page);
+    await expect(page.locator('#reading-rain')).toHaveText('10%');
+    await expect(page.locator('#kit')).toContainText('Waterproof jacket');
+
+    // 07:00 for 20 minutes is over well before 08:00
+    await page.goBack();
+    await page.getByRole('spinbutton', { name: 'Duration' }).fill('20');
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#kit li').first()).toBeVisible();
+    await expect(page.locator('#kit')).not.toContainText('jacket');
+  });
+
+  test('says so plainly when the forecast doesn\'t cover the chosen time', async ({ page }) => {
+    await mockServices(page, { weather: { hourly: { time: [] } } });
+    await page.goto('/');
+    await openOutfit(page);
+    await expect(page.locator('#weather-status')).toHaveText(
+      'There\'s no forecast for that day and time yet. Try again later.'
+    );
+    await expect(page.locator('#results')).toBeHidden();
   });
 
   test('shows running kit by default', async ({ page }) => {
@@ -219,7 +322,6 @@ test.describe('with location allowed', () => {
   test('can change to another place, and go back to your location', async ({ page }) => {
     const requests = await mockServices(page);
     await page.goto('/');
-    await expect.poll(() => requests.length).toBe(1);
 
     await page.getByRole('button', { name: 'Change', exact: true }).click();
     await page.getByRole('searchbox', { name: 'Town or city' }).fill('Malaga');
@@ -227,7 +329,9 @@ test.describe('with location allowed', () => {
     await page.getByRole('button', { name: 'Málaga, Andalusia, Spain' }).click();
 
     await expect(page.locator('#location-name')).toHaveText('Málaga, Andalusia, Spain');
-    await expect.poll(() => requests.at(-1).searchParams.get('latitude')).toBe('36.72');
+    await openOutfit(page);
+    await expect(page.locator('#place-note')).toHaveText('Forecast for Málaga, Andalusia, Spain.');
+    expect(requests.at(-1).searchParams.get('latitude')).toBe('36.72');
 
     // The holiday location is remembered after closing the page
     await page.reload();
@@ -236,7 +340,9 @@ test.describe('with location allowed', () => {
     await page.getByRole('button', { name: 'Change', exact: true }).click();
     await page.getByRole('button', { name: 'Use my current location' }).click();
     await expect(page.locator('#location-name')).toHaveText('Your current location');
-    await expect.poll(() => requests.at(-1).searchParams.get('latitude')).toBe('51.5');
+    await openOutfit(page);
+    await expect(page.locator('#place-note')).toHaveText('Forecast for where you are now.');
+    expect(requests.at(-1).searchParams.get('latitude')).toBe('51.5');
   });
 
   test('tells you when a place can\'t be found', async ({ page }) => {
@@ -255,7 +361,7 @@ test.describe('with location allowed', () => {
     await page.goto('/');
     await openOutfit(page);
     await expect(page.locator('#weather-status')).toHaveText(
-      'Couldn\'t get the weather right now. Check your connection and try again.'
+      'Couldn\'t get the forecast right now. Check your connection and try again.'
     );
     await expect(page.locator('#results')).toBeHidden();
   });
@@ -307,6 +413,8 @@ test.describe('with location allowed', () => {
     expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
     await openOutfit(page);
     await expect(page.locator('#kit li').first()).toBeVisible();
+    // A long wind reading still fits
+    await expect(page.locator('#reading-wind')).toBeVisible();
     scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
   });
@@ -561,14 +669,61 @@ test.describe('with location allowed', () => {
 });
 
 test.describe('with location blocked', () => {
-  test('asks you to search for a town instead', async ({ page }) => {
+  test.use({ timezoneId: 'Europe/London' });
+
+  test('uses central London and says so', async ({ page }) => {
     await withProfile(page);
     await page.addInitScript(() => {
       navigator.geolocation.getCurrentPosition = (success, error) => error({ code: 1, message: 'denied' });
     });
+    const requests = await mockServices(page);
+    await page.goto('/');
+    await expect(page.locator('#location-name')).toHaveText('Central London');
+    await expect(page.locator('#status')).toHaveText(
+      'We couldn\'t get your location, so we\'re using central London. Tap Change to pick a town.'
+    );
+    // You can still pick a town, but you don't have to
+    await expect(page.getByRole('searchbox', { name: 'Town or city' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Change', exact: true })).toBeVisible();
+
+    await openOutfit(page);
+    await expect(page.locator('#place-note')).toHaveText(
+      'Forecast for central London, as we couldn\'t get your location.'
+    );
+    await expect(page.locator('#reading-temperature')).toHaveText('10°C');
+    expect(requests[0].searchParams.get('latitude')).toBe(CENTRAL_LONDON.latitude);
+    expect(requests[0].searchParams.get('longitude')).toBe(CENTRAL_LONDON.longitude);
+  });
+
+  test('uses central London when the phone can\'t share a location at all', async ({ page }) => {
+    await withProfile(page);
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'geolocation', { value: undefined });
+    });
     await mockServices(page);
     await page.goto('/');
-    await expect(page.locator('#status')).toHaveText('We couldn\'t get your location. Search for a town instead.');
-    await expect(page.getByRole('searchbox', { name: 'Town or city' })).toBeVisible();
+    await expect(page.locator('#location-name')).toHaveText('Central London');
+    await openOutfit(page);
+    await expect(page.locator('#place-note')).toHaveText(
+      'Forecast for central London, as we couldn\'t get your location.'
+    );
+  });
+
+  test('waits for your location before fetching the forecast', async ({ page }) => {
+    await withProfile(page);
+    // The phone takes its time to answer
+    await page.addInitScript(() => {
+      navigator.geolocation.getCurrentPosition = (success) => {
+        window.answerLocation = () => success({ coords: { latitude: 51.5, longitude: -0.12 } });
+      };
+    });
+    const requests = await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page);
+    await expect(page.locator('#weather-status')).toHaveText('Finding your location…');
+    expect(requests).toHaveLength(0);
+    await page.evaluate(() => window.answerLocation());
+    await expect(page.locator('#reading-temperature')).toHaveText('10°C');
+    expect(requests[0].searchParams.get('latitude')).toBe('51.5');
   });
 });
