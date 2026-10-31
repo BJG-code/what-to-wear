@@ -24,12 +24,12 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 ## Screens and flow
 
-- [ ] 1. No "Getting to know you" first-launch screen (name, runs hot/neutral/cold, units, "Let's go").
+- [x] 1. No "Getting to know you" first-launch screen (name, runs hot/neutral/cold, units, "Let's go").
 - [x] 2. No separate "Plan a session" screen; everything is on one page.
 - [x] 3. No "Your outfit" result screen with a back arrow and summary line (e.g. "Wed 28 Oct · 07:00 · Easy 8 km run").
 - [ ] 4. No Settings screen or settings cog.
 - [x] 5. The logo image and tagline aren't shown; the page uses a purple text heading instead.
-- [ ] 6. No "Hello Bradley" greeting.
+- [x] 6. No "Hello Bradley" greeting.
 
 ## Session inputs
 
@@ -42,7 +42,7 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 ## Profile
 
-- [ ] 13. Hot/cold choice says "Feel the cold / Feel normal / Run warm" and moves by 3 °C; should be "Runs hot / Neutral / Runs cold" moving by 2 °C.
+- [x] 13. Hot/cold choice says "Feel the cold / Feel normal / Run warm" and moves by 3 °C; should be "Runs hot / Neutral / Runs cold" moving by 2 °C.
 - [ ] 14. No units shown in the profile or Settings (km/h is already used, which is correct).
 - [ ] 15. Rules of thumb can't be viewed or edited.
 

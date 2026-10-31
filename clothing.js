@@ -1,8 +1,8 @@
 // Works out what to wear from the weather.
 // Kept separate from the page so the rules can be tested on their own.
 (function (root) {
-  // How many degrees colder or warmer it feels to someone, based on their preference
-  const PREFERENCE_ADJUST = { cold: -3, normal: 0, warm: 3 };
+  // From "Do you run hot or cold?": runs hot dresses you 2 °C lighter, runs cold 2 °C warmer
+  const PREFERENCE_ADJUST = { hot: 2, neutral: 0, cold: -2 };
 
   // Cycling feels colder than running: you're moving faster and working less hard
   const ACTIVITY_ADJUST = { running: 0, cycling: -2 };

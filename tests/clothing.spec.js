@@ -1,13 +1,13 @@
 // Checks the rules that decide what to wear, without opening the page.
 const { test, expect } = require('@playwright/test');
-const { recommend } = require('../clothing.js');
+const { recommend, effectiveTemperature } = require('../clothing.js');
 
 const calm = { windSpeed: 5, rainChance: 0, isDay: true, sunny: false };
 
 function wear(activity, feelsLike, extra = {}) {
   const { items } = recommend({
     activity,
-    preference: extra.preference || 'normal',
+    preference: extra.preference || 'neutral',
     weather: { ...calm, feelsLike, ...extra.weather },
   });
   return items.map((i) => i.item);
@@ -53,14 +53,26 @@ test.describe('cycling', () => {
 });
 
 test.describe('personal preference', () => {
-  test('someone who feels the cold gets warmer kit', () => {
+  test('runs cold gets warmer kit', () => {
     expect(wear('running', 14)).toContain('Short-sleeve top');
     expect(wear('running', 14, { preference: 'cold' })).toContain('Long-sleeve top');
   });
 
-  test('someone who runs warm gets lighter kit', () => {
+  test('runs hot gets lighter kit', () => {
     expect(wear('running', 6)).toContain('Running tights');
-    expect(wear('running', 6, { preference: 'warm' })).toContain('Shorts or 3/4 tights');
+    expect(wear('running', 6, { preference: 'hot' })).toContain('Shorts or 3/4 tights');
+  });
+
+  test('runs hot adds 2 °C, neutral 0, runs cold takes off 2 °C', () => {
+    const temp = (preference) => effectiveTemperature({ feelsLike: 10, activity: 'running', preference });
+    expect(temp('hot')).toBe(12);
+    expect(temp('neutral')).toBe(10);
+    expect(temp('cold')).toBe(8);
+  });
+
+  test('exactly 2 °C: runs cold at 15 °C feels like 13 °C, the edge of a short-sleeve top', () => {
+    expect(wear('running', 15, { preference: 'cold' })).toContain('Short-sleeve top');
+    expect(wear('running', 14.9, { preference: 'cold' })).toContain('Long-sleeve top');
   });
 });
 
@@ -88,7 +100,7 @@ test.describe('extras', () => {
   });
 
   test('mild, dry, calm daytime: no extras', () => {
-    const { items } = recommend({ activity: 'running', preference: 'normal', weather: { ...calm, feelsLike: 10 } });
+    const { items } = recommend({ activity: 'running', preference: 'neutral', weather: { ...calm, feelsLike: 10 } });
     expect(items.some((i) => i.area === 'Also')).toBe(false);
   });
 });
