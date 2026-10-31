@@ -103,7 +103,7 @@ test.describe('with location allowed', () => {
     await page.getByText('Cycling').click();
     await page.reload();
     await expect(page.getByRole('radio', { name: 'Cycling' })).toBeChecked();
-    await expect(page.getByText('Hello Bradley')).toBeVisible();
+    await expect(page.getByText('Hello Bradley!')).toBeVisible();
   });
 
   test('first launch: opens on Getting to know you', async ({ page }) => {
@@ -139,12 +139,12 @@ test.describe('with location allowed', () => {
     await page.getByText('Runs cold', { exact: true }).click();
     await page.getByRole('button', { name: 'Let\'s go' }).click();
     await expect(page.getByRole('heading', { name: 'Plan a session' })).toBeVisible();
-    await expect(page.locator('#greeting')).toHaveText('Hello Bradley');
+    await expect(page.locator('#greeting')).toHaveText('Hello Bradley!');
     await expect(page.locator('#profile-screen')).toBeHidden();
 
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Plan a session' })).toBeVisible();
-    await expect(page.locator('#greeting')).toHaveText('Hello Bradley');
+    await expect(page.locator('#greeting')).toHaveText('Hello Bradley!');
     await expect(page.locator('#profile-screen')).toBeHidden();
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')).profile);
     expect(saved).toEqual({ name: 'Bradley', warmth: 'cold' });
@@ -176,7 +176,7 @@ test.describe('with location allowed', () => {
   test('"Change your details" lets you fix your name and run hot or cold', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
-    await expect(page.locator('#greeting')).toHaveText('Hello Bradley');
+    await expect(page.locator('#greeting')).toHaveText('Hello Bradley!');
     const change = page.getByRole('button', { name: 'Change your details' });
     expect((await change.boundingBox()).height).toBeGreaterThanOrEqual(44);
     await change.click();
@@ -189,10 +189,10 @@ test.describe('with location allowed', () => {
     await name.fill('Brad');
     await page.getByText('Runs hot', { exact: true }).click();
     await page.getByRole('button', { name: 'Let\'s go' }).click();
-    await expect(page.locator('#greeting')).toHaveText('Hello Brad');
+    await expect(page.locator('#greeting')).toHaveText('Hello Brad!');
 
     await page.reload();
-    await expect(page.locator('#greeting')).toHaveText('Hello Brad');
+    await expect(page.locator('#greeting')).toHaveText('Hello Brad!');
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')).profile);
     expect(saved).toEqual({ name: 'Brad', warmth: 'hot' });
   });
