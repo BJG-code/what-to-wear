@@ -95,6 +95,8 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 - [x] C1. Running and cycling share one distance, so switching activity keeps the same number. Done 6 Nov 2026: each activity remembers its own last distance (first time: running 5 km, cycling 20 km).
 
+- [x] C2. A new release could take about 10 minutes to reach the phone after merging. Done 6 Nov 2026: opening the app (or coming back to it) checks for a newer release and loads it straight away, but never while you're looking at an outfit or Settings.
+
 ## Bugs
 
 - [x] B1. After a merge, the iPhone home-screen app kept showing the old version, because it reused its saved copies of weather.js, clothing.js and app.js. Done 6 Nov 2026: each release has a version number on its file links so the phone fetches fresh copies, Settings shows the version, and the automated checks fail if a change to the app forgets to update it.

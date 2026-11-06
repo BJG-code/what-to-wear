@@ -844,10 +844,39 @@
     return editor;
   }
 
+  // The version of the app that's running, e.g. "2026.11.06.1"
+  const APP_VERSION = document.querySelector('meta[name="app-version"]').content;
+
+  // Asks the website which version is live. If it's newer than the one running, open the
+  // new one straight away, so a release shows up the next time you open the app.
+  // Only on Getting to know you or Plan a session, so it never takes away an outfit you're reading.
+  async function checkForUpdate() {
+    if (!el('outfit-screen').hidden || !el('settings-screen').hidden) return;
+    let live;
+    try {
+      // A new address each time, so neither the phone nor the website hands back an old copy
+      const response = await fetch(`index.html?check=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) return;
+      live = ((await response.text()).match(/<meta name="app-version" content="([^"]+)">/) || [])[1];
+    } catch (error) {
+      return; // No signal: carry on with the version already here
+    }
+    if (!live || live === APP_VERSION) return;
+    // Only try once for each new version, so a slow website can't make the app reload over and over
+    try {
+      if (sessionStorage.getItem('what-to-wear-update') === live) return;
+      sessionStorage.setItem('what-to-wear-update', live);
+    } catch (error) {
+      return; // Can't remember the try, so don't risk reloading over and over
+    }
+    if (!el('outfit-screen').hidden || !el('settings-screen').hidden) return;
+    // The ?v= makes it a new address, so the phone fetches the new page instead of its old copy
+    location.replace(`${location.pathname}?v=${encodeURIComponent(live)}`);
+  }
+
   function initSettings() {
     // The version label at the bottom of Settings, e.g. "Version 2026.11.06.1"
-    const version = document.querySelector('meta[name="app-version"]').content;
-    el('app-version').textContent = `Version ${version}`;
+    el('app-version').textContent = `Version ${APP_VERSION}`;
     el('open-settings').addEventListener('click', openSettings);
     el('settings-back').addEventListener('click', () => history.back());
     el('settings-name').addEventListener('input', nameTyped);
@@ -907,8 +936,10 @@
     showDays();
     // If the app is left open past midnight, move the days along when you come back to it
     // Coming back to the app also checks whether a session has finished and can be rated
+    // It also looks for a newer version of the app
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) return;
+      checkForUpdate();
       showDays();
       showFeedback();
       if (!el('plan-screen').hidden) showLastSession();
@@ -949,7 +980,8 @@
       else showScreen(screen === 'outfit' ? 'outfit' : 'plan');
     });
     // Open on Getting to know you the first time, then always on Plan a session, even after a reload
-    history.replaceState(null, '');
+    // Also tidies away the ?v= left by an update, so the address is plain again
+    history.replaceState(null, '', location.pathname);
     showScreen(state.profile ? 'plan' : 'profile');
 
     el('change-location').addEventListener('click', () => showSearch(el('search').hidden));
@@ -965,6 +997,7 @@
     } else {
       useDeviceLocation();
     }
+    checkForUpdate();
   }
 
   init();

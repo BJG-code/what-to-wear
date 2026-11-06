@@ -1397,6 +1397,90 @@ test.describe('releases', () => {
     expect(isLast).toBe(true);
   });
 
+  // Pretends the website has a newer release than the one on the phone: the app's
+  // "which version is live?" question gets an index.html with this version in it
+  async function liveVersion(page, version) {
+    const checks = [];
+    await page.route('**/index.html?check=*', async (route) => {
+      checks.push(route.request().url());
+      const response = await route.fetch();
+      const html = (await response.text())
+        .replace(/<meta name="app-version" content="[^"]+">/, `<meta name="app-version" content="${version}">`);
+      return route.fulfill({ response, body: html });
+    });
+    return checks;
+  }
+
+  test('opening the app loads a newer release straight away', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    const checks = await liveVersion(page, '2099.01.01.1');
+    // The phone opens the new address, which makes it fetch fresh files
+    const update = page.waitForRequest((request) => request.url().includes('?v=2099.01.01.1'));
+    await page.goto('/');
+    await update;
+    expect(checks.length).toBeGreaterThanOrEqual(1);
+    // After the update the address is plain again, and you're on Plan a session
+    await expect(page.getByText('Hello Bradley!')).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('if the website still serves the old release, the app only tries once and carries on', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    await liveVersion(page, '2099.01.01.1');
+    const pages = [];
+    page.on('request', (request) => {
+      if (request.resourceType() === 'document') pages.push(request.url());
+    });
+    await page.goto('/');
+    await expect(page.getByText('Hello Bradley!')).toBeVisible();
+    // Give it time to (wrongly) try again
+    await page.waitForTimeout(1000);
+    expect(pages.length).toBe(2);
+    // Coming back to the app doesn't try again either
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(500);
+    expect(pages.length).toBe(2);
+    await expect(page.getByText('Hello Bradley!')).toBeVisible();
+  });
+
+  test('no update when the live version is the same, or the check fails', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    const pages = [];
+    page.on('request', (request) => {
+      if (request.resourceType() === 'document') pages.push(request.url());
+    });
+    const checked = page.waitForRequest((request) => request.url().includes('index.html?check='));
+    await page.goto('/');
+    await checked;
+    await page.waitForTimeout(500);
+    expect(pages.length).toBe(1);
+
+    // No signal for the check: nothing happens
+    await page.route('**/index.html?check=*', (route) => route.abort());
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(500);
+    expect(pages.length).toBe(1);
+    await expect(page.getByText('Hello Bradley!')).toBeVisible();
+  });
+
+  test('a newer release never takes away the outfit you are looking at', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    await page.goto('/');
+    await fillSession(page);
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#outfit-screen')).toBeVisible();
+
+    const checks = await liveVersion(page, '2099.01.01.1');
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(500);
+    expect(checks.length).toBe(0);
+    await expect(page.locator('#outfit-screen')).toBeVisible();
+  });
+
   test('a new release keeps everything saved on the phone', async ({ page }) => {
     // Saved by an older release
     await page.addInitScript(() => {
