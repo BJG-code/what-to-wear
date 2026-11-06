@@ -14,6 +14,7 @@
 - You can search for a town instead of using your location, e.g. to plan a session somewhere you aren't yet. The town you pick is remembered until you switch back to "Use my current location" (agreed later on 31 Oct 2026).
 - The dressing temperature is rounded to the nearest whole degree (halves round up, so 10.5 becomes 11), and the outfit uses that rounded number, so it always matches the number on screen (agreed later on 31 Oct 2026).
 - "Not overcast" for sun cream means cloud cover under 50%; 50% or more counts as overcast (agreed later on 31 Oct 2026).
+- **C1 (agreed 6 Nov 2026):** running and cycling each remember their own distance. Switching activity shows the last distance you entered for that activity, instead of keeping the same number. The first time, running starts at 5 km and cycling at 20 km. The distances are kept on the phone between visits.
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -77,7 +78,7 @@ The profile is set once on first launch and editable in Settings; the session in
 | Activity | Running / Cycling | Picks the clothing set and rules |
 | Day | Today up to 5 days ahead | Later days are greyed out |
 | Time | Hour picker | Forecast is read for that hour (e.g. 07:00 tomorrow, not the weather now) |
-| Distance | km | Longer sessions dress lighter, as you warm up on the way (see Outfit rules) |
+| Distance | km, remembered separately for running and cycling: switching activity shows the last distance entered for it (first time: running 5 km, cycling 20 km) | Longer sessions dress lighter, as you warm up on the way (see Outfit rules) |
 | Duration | Minutes, pre-filled from distance (running about 6 min/km, cycling about 25 km/h), editable | Sets the weather window: every forecast hour from start to finish is checked for changes (see Output). Does not change the dressing temperature |
 | Effort | Hard (170+ bpm) / Medium (140–170) / Easy (110–140) | Harder effort means you dress lighter |
 
