@@ -13,6 +13,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The whole history, so the version check can compare with main
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -20,3 +23,6 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test
+      # A pull request that changes the app must also change its version number
+      - if: github.event_name == 'pull_request'
+        run: node tests/check-version.js origin/${{ github.base_ref }}

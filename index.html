@@ -10,6 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="What to wear">
   <title>What to wear</title>
+  <!-- The version of this release. Change it in every pull request that changes the app
+       (here and in the ?v= on the files at the bottom), so the phone fetches fresh copies
+       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.06.1 -->
+  <meta name="app-version" content="2026.11.06.1">
   <!-- The app's icon on the iPhone home screen, and in the browser tab -->
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="assets/apple-touch-icon.png">
@@ -740,6 +744,13 @@
       color: inherit;
     }
 
+    /* Small version label at the bottom of Settings */
+    .app-version {
+      font-size: 0.875rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
     /* Settings cog beside the logo */
     .logo {
       display: flex;
@@ -1178,6 +1189,9 @@
         <p class="hint">Temperatures are dressing temperatures. Tap a row to change it.</p>
         <button type="button" class="button reset-rules" id="reset-rules">Back to the starting rules</button>
       </section>
+
+      <!-- Which release is on the phone, filled in by app.js from app-version -->
+      <p class="app-version" id="app-version"></p>
     </div>
 
     <footer>
@@ -1185,8 +1199,9 @@
     </footer>
   </main>
 
-  <script src="weather.js"></script>
-  <script src="clothing.js"></script>
-  <script src="app.js"></script>
+  <!-- The ?v= must match app-version at the top, so each release loads fresh files -->
+  <script src="weather.js?v=2026.11.06.1"></script>
+  <script src="clothing.js?v=2026.11.06.1"></script>
+  <script src="app.js?v=2026.11.06.1"></script>
 </body>
 </html>

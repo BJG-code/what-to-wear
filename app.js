@@ -845,6 +845,9 @@
   }
 
   function initSettings() {
+    // The version label at the bottom of Settings, e.g. "Version 2026.11.06.1"
+    const version = document.querySelector('meta[name="app-version"]').content;
+    el('app-version').textContent = `Version ${version}`;
     el('open-settings').addEventListener('click', openSettings);
     el('settings-back').addEventListener('click', () => history.back());
     el('settings-name').addEventListener('input', nameTyped);
