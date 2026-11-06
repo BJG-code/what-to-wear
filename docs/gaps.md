@@ -91,6 +91,10 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 - [x] 41. README and ROADMAP describe the old version and contradict the spec.
 - [x] 42. The automated checks test the old rules and layout; they'll be rewritten gap by gap as each one is fixed. Done 31 Oct 2026: rewritten across sessions 1 to 11.
 
+## Change requests
+
+- [x] C1. Running and cycling share one distance, so switching activity keeps the same number. Done 6 Nov 2026: each activity remembers its own last distance (first time: running 5 km, cycling 20 km).
+
 ## Open questions
 
 - [x] Thresholds are whole numbers (6 to 10, 5 or below), so 10.5 °C has no clear answer. Decided 31 Oct 2026: round the dressing temperature to the nearest whole degree (halves round up), and use that rounded number for the outfit. Added to the spec.

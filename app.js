@@ -15,6 +15,8 @@
   // Minutes per km, used to pre-fill the duration: running about 6 min/km, cycling about 25 km/h
   const PACE = { running: 6, cycling: 60 / 25 };
   const DAYS_AHEAD = 5;
+  // The distance shown the first time you pick each activity (km)
+  const DEFAULT_DISTANCE = { running: 5, cycling: 20 };
   // How many recent outfits to keep, waiting to be rated, and for how long after they finish
   const KEEP_OUTFITS = 5;
   const RATE_WITHIN_DAYS = 3;
@@ -26,10 +28,12 @@
   // offsets: learned from your feedback, separate for running and cycling (°C)
   // ratings: every rating you've given, with its forecast, effort, distance and duration
   // outfits: recent outfits you haven't rated yet, so you can come back and rate them after the session
+  // distances: the last distance you entered for each activity, shown again when you switch to it (km)
   // rules: your rules of thumb, the dressing temperatures where each item starts (changed in Settings)
   const state = {
     activity: 'running', profile: null, location: null, weather: null, session: null,
     offsets: { running: 0, cycling: 0 }, ratings: [], outfits: [],
+    distances: { ...DEFAULT_DISTANCE },
     rules: window.Clothing.checkRules(null),
   };
   // Where the forecast on Your outfit is for, and the dressing temperature it gave
@@ -58,6 +62,12 @@
           if (typeof n === 'number' && Math.abs(n) <= window.Clothing.OFFSET_LIMIT) state.offsets[activity] = n;
         }
       }
+      if (saved.distances) {
+        for (const activity of ['running', 'cycling']) {
+          const km = saved.distances[activity];
+          if (typeof km === 'number' && km > 0 && km <= 500) state.distances[activity] = km;
+        }
+      }
       if (Array.isArray(saved.ratings)) state.ratings = saved.ratings;
       state.rules = window.Clothing.checkRules(saved.rules);
       if (Array.isArray(saved.outfits)) {
@@ -75,7 +85,7 @@
       const location = state.location && state.location.source === 'search' ? state.location : null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         activity: state.activity, profile: state.profile, location,
-        offsets: state.offsets, ratings: state.ratings, outfits: state.outfits, rules: state.rules,
+        offsets: state.offsets, distances: state.distances, ratings: state.ratings, outfits: state.outfits, rules: state.rules,
       }));
     } catch (e) { /* not remembered, but the page still works */ }
   }
@@ -194,6 +204,20 @@
     if (durationTyped) return;
     const km = readNumber(el('distance'), 500);
     el('duration').value = km ? Math.max(1, Math.round(km * PACE[state.activity])) : '';
+  }
+
+  // Remember the distance you've entered for this activity (only one that makes sense)
+  function rememberDistance() {
+    const km = readNumber(el('distance'), 500);
+    if (km === null) return;
+    state.distances[state.activity] = Math.round(km * 10) / 10;
+    save();
+  }
+
+  // Show the last distance used for the chosen activity, and work out the duration from it
+  function showDistance() {
+    el('distance').value = state.distances[state.activity];
+    fillDuration();
   }
 
   // The − and + buttons beside the distance, 1 km at a time and never below 1 km
@@ -857,7 +881,7 @@
       input.addEventListener('change', () => {
         state.activity = input.value;
         save();
-        fillDuration();
+        showDistance();
       });
     }
 
@@ -893,7 +917,11 @@
     }
     el('rate-last').addEventListener('click', reopenLast);
     el('skip-last').addEventListener('click', forgetLast);
-    el('distance').addEventListener('input', fillDuration);
+    showDistance();
+    el('distance').addEventListener('input', () => {
+      rememberDistance();
+      fillDuration();
+    });
     el('distance-down').addEventListener('click', () => stepDistance(-1));
     el('distance-up').addEventListener('click', () => stepDistance(1));
     el('duration').addEventListener('input', () => {

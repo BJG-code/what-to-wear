@@ -582,6 +582,9 @@ test.describe('with location allowed', () => {
   test('"What should I wear?" only works once every input is filled in', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
+    // The distance starts filled in, so empty it to check it's needed too
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('');
+    await page.getByRole('spinbutton', { name: 'Duration' }).fill('');
     const wear = page.getByRole('button', { name: 'What should I wear?' });
     await wear.click();
     await expect(page.locator('#plan-screen')).toBeVisible();
@@ -644,7 +647,8 @@ test.describe('with location allowed', () => {
     await mockServices(page);
     await page.goto('/');
     const duration = page.getByRole('spinbutton', { name: 'Duration' });
-    await expect(duration).toHaveValue('');
+    // Starts at 5 km, so 30 minutes
+    await expect(duration).toHaveValue('30');
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('8');
     await expect(duration).toHaveValue('48');
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('5.5');
@@ -657,13 +661,15 @@ test.describe('with location allowed', () => {
     await page.goto('/');
     await page.locator('#plan-screen').getByText('Cycling').click();
     const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    // Starts at 20 km, so 48 minutes
+    await expect(duration).toHaveValue('48');
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('25');
     await expect(duration).toHaveValue('60');
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('30');
     await expect(duration).toHaveValue('72');
-    // Switching to running works it out again
+    // Switching to running works it out again, from running's own 5 km
     await page.locator('#plan-screen').getByText('Running').click();
-    await expect(duration).toHaveValue('180');
+    await expect(duration).toHaveValue('30');
   });
 
   test('a duration you type yourself is kept', async ({ page }) => {
@@ -692,6 +698,8 @@ test.describe('with location allowed', () => {
     const distance = page.getByRole('spinbutton', { name: 'Distance' });
     const more = page.getByRole('button', { name: '1 km more' });
     const less = page.getByRole('button', { name: '1 km less' });
+    // From an empty box, + gives 1 km
+    await distance.fill('');
     await more.click();
     await expect(distance).toHaveValue('1');
     await more.click();
@@ -703,6 +711,55 @@ test.describe('with location allowed', () => {
     await expect(distance).toHaveValue('1');
     await less.click();
     await expect(distance).toHaveValue('1');
+  });
+
+  test('distance starts at 5 km for running and 20 km for cycling', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const distance = page.getByRole('spinbutton', { name: 'Distance' });
+    await expect(distance).toHaveValue('5');
+    await page.locator('#plan-screen').getByText('Cycling').click();
+    await expect(distance).toHaveValue('20');
+    await page.locator('#plan-screen').getByText('Running').click();
+    await expect(distance).toHaveValue('5');
+  });
+
+  test('running and cycling each remember their own last distance, even after a reload', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const distance = page.getByRole('spinbutton', { name: 'Distance' });
+    const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    await distance.fill('10');
+    await page.locator('#plan-screen').getByText('Cycling').click();
+    await expect(distance).toHaveValue('20');
+    await page.getByRole('button', { name: '1 km more' }).click();
+    await expect(distance).toHaveValue('21');
+    await page.locator('#plan-screen').getByText('Running').click();
+    await expect(distance).toHaveValue('10');
+    await expect(duration).toHaveValue('60');
+    await page.locator('#plan-screen').getByText('Cycling').click();
+    await expect(distance).toHaveValue('21');
+    // Still remembered next time the app opens, on the activity last used
+    await page.reload();
+    await expect(page.getByRole('radio', { name: 'Cycling' })).toBeChecked();
+    await expect(distance).toHaveValue('21');
+    await expect(duration).toHaveValue('50');
+    await page.locator('#plan-screen').getByText('Running').click();
+    await expect(distance).toHaveValue('10');
+  });
+
+  test('a distance that does not make sense is not remembered', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const distance = page.getByRole('spinbutton', { name: 'Distance' });
+    await distance.fill('7');
+    await distance.fill('0');
+    await page.locator('#plan-screen').getByText('Cycling').click();
+    await page.locator('#plan-screen').getByText('Running').click();
+    await expect(distance).toHaveValue('7');
+    await distance.fill('');
+    await page.reload();
+    await expect(distance).toHaveValue('7');
   });
 
   test('effort shows Easy, Medium and Hard with their heart rates', async ({ page }) => {
