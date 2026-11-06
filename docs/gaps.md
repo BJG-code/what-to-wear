@@ -95,11 +95,13 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 - [x] C1. Running and cycling share one distance, so switching activity keeps the same number. Done 6 Nov 2026: each activity remembers its own last distance (first time: running 5 km, cycling 20 km).
 
-- [x] C2. A new release could take about 10 minutes to reach the phone after merging. Done 6 Nov 2026: opening the app (or coming back to it) checks for a newer release and loads it straight away, but never while you're looking at an outfit or Settings.
+- [x] C2. Duration was always estimated at 6 min/km for running and 25 km/h for cycling, whatever your own pace. Done 6 Nov 2026: "Your usual pace" is asked on Getting to know you and can be changed in Settings, and Plan a session estimates the duration from it and says so.
 
 ## Bugs
 
 - [x] B1. After a merge, the iPhone home-screen app kept showing the old version, because it reused its saved copies of weather.js, clothing.js and app.js. Done 6 Nov 2026: each release has a version number on its file links so the phone fetches fresh copies, Settings shows the version, and the automated checks fail if a change to the app forgets to update it.
+
+- [x] B2. A new release could take about 10 minutes to reach the phone after merging. Done 6 Nov 2026: opening the app (or coming back to it) checks for a newer release and loads it straight away, but never while you're looking at an outfit or Settings. (Was C2; renamed B2 as a follow-up to B1.)
 
 ## Open questions
 
