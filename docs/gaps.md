@@ -95,6 +95,10 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 - [x] C1. Running and cycling share one distance, so switching activity keeps the same number. Done 6 Nov 2026: each activity remembers its own last distance (first time: running 5 km, cycling 20 km).
 
+## Bugs
+
+- [x] B1. After a merge, the iPhone home-screen app kept showing the old version, because it reused its saved copies of weather.js, clothing.js and app.js. Done 6 Nov 2026: each release has a version number on its file links so the phone fetches fresh copies, Settings shows the version, and the automated checks fail if a change to the app forgets to update it.
+
 ## Open questions
 
 - [x] Thresholds are whole numbers (6 to 10, 5 or below), so 10.5 °C has no clear answer. Decided 31 Oct 2026: round the dressing temperature to the nearest whole degree (halves round up), and use that rounded number for the outfit. Added to the spec.

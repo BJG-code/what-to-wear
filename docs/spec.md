@@ -15,6 +15,7 @@
 - The dressing temperature is rounded to the nearest whole degree (halves round up, so 10.5 becomes 11), and the outfit uses that rounded number, so it always matches the number on screen (agreed later on 31 Oct 2026).
 - "Not overcast" for sun cream means cloud cover under 50%; 50% or more counts as overcast (agreed later on 31 Oct 2026).
 - **C1 (agreed 6 Nov 2026):** running and cycling each remember their own distance. Switching activity shows the last distance you entered for that activity, instead of keeping the same number. The first time, running starts at 5 km and cycling at 20 km. The distances are kept on the phone between visits.
+- **B1 (agreed 6 Nov 2026):** every release has a version number (e.g. 2026.11.06.1), shown in small text at the bottom of Settings as "Version 2026.11.06.1". Each release makes the phone load fresh files, and nothing saved on the phone is lost.
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -56,7 +57,7 @@ Screens in v1.0 (mockups in docs/mockups/):
 | Getting to know you (first launch) | main.png | Logo + tagline, name, runs hot / neutral / runs cold, units, "Let's go" |
 | Plan a session | plan.png | Logo + tagline and settings cog, "Hello Bradley!" greeting, activity, day (today + 5), start time, distance, duration, effort, "What should I wear?" |
 | Your outfit | outfit.png | Dressing temperature and its breakdown, six weather readings, three outfit cards, notes that apply, three feedback buttons |
-| Settings | settings.png | Profile, learned offsets with Reset, rules of thumb (running / cycling tabs) |
+| Settings | settings.png | Profile, learned offsets with Reset, rules of thumb (running / cycling tabs), version label at the bottom |
 
 ## Inputs
 

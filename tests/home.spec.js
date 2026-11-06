@@ -1358,3 +1358,59 @@ test.describe('settings', () => {
     }
   });
 });
+
+test.describe('releases', () => {
+  test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
+
+  // The version written at the top of index.html, e.g. "2026.11.06.1"
+  async function appVersion(page) {
+    return page.locator('meta[name="app-version"]').getAttribute('content');
+  }
+
+  test('every script and stylesheet of ours carries the version, so a new release loads fresh files', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    await page.goto('/');
+    const version = await appVersion(page);
+    expect(version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d+$/);
+
+    // Our own files only: the Google font comes from elsewhere
+    const links = await page.evaluate(() => [
+      ...[...document.querySelectorAll('script[src]')].map((s) => s.getAttribute('src')),
+      ...[...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => l.getAttribute('href')),
+    ].filter((link) => !/^https?:/.test(link)));
+    expect(links.length).toBeGreaterThanOrEqual(3);
+    for (const link of links) expect(link).toMatch(new RegExp(`\\?v=${version.replace(/\./g, '\\.')}$`));
+  });
+
+  test('Settings shows the version at the bottom', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    await page.goto('/');
+    const version = await appVersion(page);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const label = page.locator('#app-version');
+    await expect(label).toHaveText(`Version ${version}`);
+    await expect(label).toBeVisible();
+    // It's the last thing on the Settings screen
+    const isLast = await label.evaluate((p) => p === p.parentElement.lastElementChild);
+    expect(isLast).toBe(true);
+  });
+
+  test('a new release keeps everything saved on the phone', async ({ page }) => {
+    // Saved by an older release
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('what-to-wear')) {
+        localStorage.setItem('what-to-wear', JSON.stringify({
+          profile: { name: 'Bradley', warmth: 'cold' }, offsets: { running: 1.5, cycling: -0.5 },
+        }));
+      }
+    });
+    await mockServices(page);
+    await page.goto('/');
+    await expect(page.getByText('Hello Bradley!')).toBeVisible();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')));
+    expect(saved.profile).toEqual({ name: 'Bradley', warmth: 'cold' });
+    expect(saved.offsets).toEqual({ running: 1.5, cycling: -0.5 });
+  });
+});
