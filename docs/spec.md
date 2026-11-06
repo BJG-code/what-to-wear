@@ -16,6 +16,7 @@
 - "Not overcast" for sun cream means cloud cover under 50%; 50% or more counts as overcast (agreed later on 31 Oct 2026).
 - **C1 (agreed 6 Nov 2026):** running and cycling each remember their own distance. Switching activity shows the last distance you entered for that activity, instead of keeping the same number. The first time, running starts at 5 km and cycling at 20 km. The distances are kept on the phone between visits.
 - **B1 (agreed 6 Nov 2026):** every release has a version number (e.g. 2026.11.06.1), shown in small text at the bottom of Settings as "Version 2026.11.06.1". Each release makes the phone load fresh files, and nothing saved on the phone is lost.
+- **C2 (agreed 6 Nov 2026):** when you open the app, or come back to it, it checks whether a newer release is live and, if so, loads it straight away. It never does this while you're looking at Your outfit or Settings, and with no signal it carries on with the version already on the phone.
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
