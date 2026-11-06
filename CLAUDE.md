@@ -43,8 +43,8 @@ Clean and minimal: sentence case, few borders, touch targets at least 44 px, des
 
 ## Inputs
 
-- **Profile** (first launch, editable in Settings): name (used for "Hello Bradley!"), Runs hot / Neutral / Runs cold, units °C · km/h · km.
-- **Each session**, all required before "What should I wear?" works: activity (running or cycling), day (today up to 5 days ahead), start time, distance (km, remembered separately for running and cycling; first time running 5 km, cycling 20 km), duration (minutes, pre-filled from distance: running about 6 min/km, cycling about 25 km/h), effort (Easy 110–140 bpm / Medium 140–170 / Hard 170+).
+- **Profile** (first launch, editable in Settings): name (used for "Hello Bradley!"), Runs hot / Neutral / Runs cold, your usual pace (running min/km, default 6:00; cycling km/h, default 25), units °C · km/h · km.
+- **Each session**, all required before "What should I wear?" works: activity (running or cycling), day (today up to 5 days ahead), start time, distance (km, remembered separately for running and cycling; first time running 5 km, cycling 20 km), duration (minutes, pre-filled from distance and your usual pace, saying how; a number you type is kept), effort (Easy 110–140 bpm / Medium 140–170 / Hard 170+).
 - The outfit is always for the chosen day and start time, never "right now".
 
 ## Weather

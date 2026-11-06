@@ -12,8 +12,8 @@
   <title>What to wear</title>
   <!-- The version of this release. Change it in every pull request that changes the app
        (here and in the ?v= on the files at the bottom), so the phone fetches fresh copies
-       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.06.2 -->
-  <meta name="app-version" content="2026.11.06.2">
+       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.06.3 -->
+  <meta name="app-version" content="2026.11.06.3">
   <!-- The app's icon on the iPhone home screen, and in the browser tab -->
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="assets/apple-touch-icon.png">
@@ -846,6 +846,28 @@
       color: var(--muted);
     }
 
+    /* Your usual pace: − 6:00 /km + */
+    .pace-stepper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pace-stepper output {
+      min-width: 5.5em;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .pace-stepper .step-button {
+      background: var(--selected-tint);
+    }
+
+    .pace-stepper .step-button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
     .learned-row strong .offset {
       color: var(--purple-light);
     }
@@ -980,6 +1002,30 @@
         <p class="hint">Runs hot dresses you 2 °C lighter; runs cold, 2 °C warmer.</p>
       </fieldset>
 
+      <!-- Your usual pace: the − and + are wired up by app.js -->
+      <section aria-labelledby="pace-label">
+        <h3 class="label" id="pace-label">Your usual pace</h3>
+        <div class="settings-card pace-card">
+          <div class="settings-row">
+            <span id="pace-running-label">Running pace</span>
+            <div class="pace-stepper" data-pace="running">
+              <button type="button" class="step-button" data-step="-5" aria-label="Running pace 5 seconds faster">−</button>
+              <output aria-labelledby="pace-running-label" aria-live="polite"></output>
+              <button type="button" class="step-button" data-step="5" aria-label="Running pace 5 seconds slower">+</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <span id="pace-cycling-label">Cycling speed</span>
+            <div class="pace-stepper" data-pace="cycling">
+              <button type="button" class="step-button" data-step="-1" aria-label="Cycling speed 1 km/h slower">−</button>
+              <output aria-labelledby="pace-cycling-label" aria-live="polite"></output>
+              <button type="button" class="step-button" data-step="1" aria-label="Cycling speed 1 km/h faster">+</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint">Used to estimate how long each session will take.</p>
+      </section>
+
       <section aria-labelledby="units-label">
         <h3 class="label" id="units-label">Units</h3>
         <dl class="units">
@@ -1051,7 +1097,8 @@
                  enterkeyhint="done" aria-describedby="duration-hint duration-error">
           <span aria-hidden="true">min</span>
         </div>
-        <p id="duration-hint" class="hint">Worked out from the distance. Change it if you like.</p>
+        <!-- Says how the duration was worked out, filled in by app.js -->
+        <p id="duration-hint" class="hint"></p>
         <p id="duration-error" class="error" hidden>Enter how long it will take, in minutes.</p>
       </div>
 
@@ -1169,6 +1216,29 @@
         </div>
       </section>
 
+      <section aria-labelledby="settings-pace-label">
+        <h3 class="label" id="settings-pace-label">Your usual pace</h3>
+        <div class="settings-card pace-card">
+          <div class="settings-row">
+            <span id="settings-pace-running-label">Running pace</span>
+            <div class="pace-stepper" data-pace="running">
+              <button type="button" class="step-button" data-step="-5" aria-label="Running pace 5 seconds faster">−</button>
+              <output aria-labelledby="settings-pace-running-label" aria-live="polite"></output>
+              <button type="button" class="step-button" data-step="5" aria-label="Running pace 5 seconds slower">+</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <span id="settings-pace-cycling-label">Cycling speed</span>
+            <div class="pace-stepper" data-pace="cycling">
+              <button type="button" class="step-button" data-step="-1" aria-label="Cycling speed 1 km/h slower">−</button>
+              <output aria-labelledby="settings-pace-cycling-label" aria-live="polite"></output>
+              <button type="button" class="step-button" data-step="1" aria-label="Cycling speed 1 km/h faster">+</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint">Used to estimate how long each session will take.</p>
+      </section>
+
       <section aria-labelledby="settings-learned-label">
         <h3 class="label" id="settings-learned-label">What the app has learned</h3>
         <div class="settings-card" id="learned"></div>
@@ -1200,8 +1270,8 @@
   </main>
 
   <!-- The ?v= must match app-version at the top, so each release loads fresh files -->
-  <script src="weather.js?v=2026.11.06.2"></script>
-  <script src="clothing.js?v=2026.11.06.2"></script>
-  <script src="app.js?v=2026.11.06.2"></script>
+  <script src="weather.js?v=2026.11.06.3"></script>
+  <script src="clothing.js?v=2026.11.06.3"></script>
+  <script src="app.js?v=2026.11.06.3"></script>
 </body>
 </html>

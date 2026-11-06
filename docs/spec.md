@@ -16,7 +16,8 @@
 - "Not overcast" for sun cream means cloud cover under 50%; 50% or more counts as overcast (agreed later on 31 Oct 2026).
 - **C1 (agreed 6 Nov 2026):** running and cycling each remember their own distance. Switching activity shows the last distance you entered for that activity, instead of keeping the same number. The first time, running starts at 5 km and cycling at 20 km. The distances are kept on the phone between visits.
 - **B1 (agreed 6 Nov 2026):** every release has a version number (e.g. 2026.11.06.1), shown in small text at the bottom of Settings as "Version 2026.11.06.1". Each release makes the phone load fresh files, and nothing saved on the phone is lost.
-- **C2 (agreed 6 Nov 2026):** when you open the app, or come back to it, it checks whether a newer release is live and, if so, loads it straight away. It never does this while you're looking at Your outfit or Settings, and with no signal it carries on with the version already on the phone.
+- **B2 (agreed 6 Nov 2026, a follow-up to B1):** when you open the app, or come back to it, it checks whether a newer release is live and, if so, loads it straight away. It never does this while you're looking at Your outfit or Settings, and with no signal it carries on with the version already on the phone.
+- **C2 (agreed 6 Nov 2026):** duration is estimated from your own usual pace instead of a fixed one. "Your usual pace" (running pace in min/km, default 6:00; cycling speed in km/h, default 25) is asked on Getting to know you, pre-filled with the defaults, and can be changed in Settings. Plan a session pre-fills the duration from the distance and that pace and says how, e.g. "Estimated from your usual pace of 5:50/km. Change it if you like." The duration stays editable, and a number you type yourself is kept.
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -55,10 +56,10 @@ Screens in v1.0 (mockups in docs/mockups/):
 
 | Screen | Mockup | Contents |
 | --- | --- | --- |
-| Getting to know you (first launch) | main.png | Logo + tagline, name, runs hot / neutral / runs cold, units, "Let's go" |
+| Getting to know you (first launch) | main.png | Logo + tagline, name, runs hot / neutral / runs cold, your usual pace, units, "Let's go" |
 | Plan a session | plan.png | Logo + tagline and settings cog, "Hello Bradley!" greeting, activity, day (today + 5), start time, distance, duration, effort, "What should I wear?" |
 | Your outfit | outfit.png | Dressing temperature and its breakdown, six weather readings, three outfit cards, notes that apply, three feedback buttons |
-| Settings | settings.png | Profile, learned offsets with Reset, rules of thumb (running / cycling tabs), version label at the bottom |
+| Settings | settings.png | Profile, your usual pace, learned offsets with Reset, rules of thumb (running / cycling tabs), version label at the bottom |
 
 ## Inputs
 
@@ -70,6 +71,7 @@ The profile is set once on first launch and editable in Settings; the session in
 | --- | --- | --- |
 | Name | Free text | Greeting: "Hello Bradley!" at the top of Plan a session |
 | Do you run hot or cold? | Runs hot / Neutral / Runs cold | Shifts every recommendation warmer or cooler |
+| Your usual pace | Running pace in min/km (default 6:00, changed 5 seconds at a time, from 3:00 to 15:00); cycling speed in km/h (default 25, changed 1 km/h at a time, from 5 to 60). Pre-filled with the defaults | Estimating the duration on Plan a session |
 | Your rules of thumb | Edit the starting thresholds (see Outfit rules) | Your own starting logic |
 | Units | °C, km/h, km (default) | Display only |
 
@@ -81,7 +83,7 @@ The profile is set once on first launch and editable in Settings; the session in
 | Day | Today up to 5 days ahead | Later days are greyed out |
 | Time | Hour picker | Forecast is read for that hour (e.g. 07:00 tomorrow, not the weather now) |
 | Distance | km, remembered separately for running and cycling: switching activity shows the last distance entered for it (first time: running 5 km, cycling 20 km) | Longer sessions dress lighter, as you warm up on the way (see Outfit rules) |
-| Duration | Minutes, pre-filled from distance (running about 6 min/km, cycling about 25 km/h), editable | Sets the weather window: every forecast hour from start to finish is checked for changes (see Output). Does not change the dressing temperature |
+| Duration | Minutes, pre-filled from distance and your usual pace (running: distance × pace; cycling: distance ÷ speed), with a line saying so, e.g. "Estimated from your usual pace of 5:50/km. Change it if you like." Editable: a number you type yourself is kept when the distance, activity or pace changes; emptying the box goes back to the estimate | Sets the weather window: every forecast hour from start to finish is checked for changes (see Output). Does not change the dressing temperature |
 | Effort | Hard (170+ bpm) / Medium (140–170) / Easy (110–140) | Harder effort means you dress lighter |
 
 ## Weather data

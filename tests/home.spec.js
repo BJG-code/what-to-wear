@@ -387,6 +387,49 @@ test.describe('with location allowed', () => {
     expect(saved).toEqual({ name: 'Bradley', warmth: 'cold' });
   });
 
+  test('first launch: asks your usual pace, starting at 6:00 /km and 25 km/h', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const profile = page.locator('#profile-screen');
+    await expect(profile.getByRole('heading', { name: 'Your usual pace' })).toBeVisible();
+    await expect(profile.getByRole('status', { name: 'Running pace' })).toHaveText('6:00 /km');
+    await expect(profile.getByRole('status', { name: 'Cycling speed' })).toHaveText('25 km/h');
+    for (const button of await profile.locator('.pace-stepper button').all()) {
+      const box = await button.boundingBox();
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  test('first launch: the pace you choose is saved and used for the duration', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const profile = page.locator('#profile-screen');
+    await page.getByLabel('Your name').fill('Bradley');
+    // 6:00 → 5:50, and 25 → 27 km/h
+    await profile.getByRole('button', { name: 'Running pace 5 seconds faster' }).click();
+    await profile.getByRole('button', { name: 'Running pace 5 seconds faster' }).click();
+    await expect(profile.getByRole('status', { name: 'Running pace' })).toHaveText('5:50 /km');
+    await profile.getByRole('button', { name: 'Cycling speed 1 km/h faster' }).click();
+    await profile.getByRole('button', { name: 'Cycling speed 1 km/h faster' }).click();
+    await expect(profile.getByRole('status', { name: 'Cycling speed' })).toHaveText('27 km/h');
+    await page.getByRole('button', { name: "Let's go" }).click();
+
+    // 5 km at 5:50/km is 29.2 minutes
+    const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    await expect(duration).toHaveValue('29');
+    await expect(page.locator('#duration-hint')).toHaveText('Estimated from your usual pace of 5:50/km. Change it if you like.');
+    // 20 km at 27 km/h is 44.4 minutes
+    await page.locator('#plan-screen').getByText('Cycling').click();
+    await expect(duration).toHaveValue('44');
+    await expect(page.locator('#duration-hint')).toHaveText('Estimated from your usual speed of 27 km/h. Change it if you like.');
+
+    await page.reload();
+    expect((await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')))).pace)
+      .toEqual({ running: 350, cycling: 27 });
+    await expect(duration).toHaveValue('44');
+  });
+
   test('first launch: the name box and buttons are big enough to tap', async ({ page }) => {
     await mockServices(page);
     await page.goto('/');
@@ -653,7 +696,7 @@ test.describe('with location allowed', () => {
     await expect(duration).toHaveValue('48');
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('5.5');
     await expect(duration).toHaveValue('33');
-    await expect(page.getByText('Worked out from the distance. Change it if you like.')).toBeVisible();
+    await expect(page.locator('#duration-hint')).toHaveText('Estimated from your usual pace of 6:00/km. Change it if you like.');
   });
 
   test('duration is worked out from the distance: cycling about 25 km/h', async ({ page }) => {
@@ -667,9 +710,24 @@ test.describe('with location allowed', () => {
     await expect(duration).toHaveValue('60');
     await page.getByRole('spinbutton', { name: 'Distance' }).fill('30');
     await expect(duration).toHaveValue('72');
+    await expect(page.locator('#duration-hint')).toHaveText('Estimated from your usual speed of 25 km/h. Change it if you like.');
     // Switching to running works it out again, from running's own 5 km
     await page.locator('#plan-screen').getByText('Running').click();
     await expect(duration).toHaveValue('30');
+  });
+
+  test('duration rounds to the nearest minute, and is never less than 1', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const distance = page.getByRole('spinbutton', { name: 'Distance' });
+    const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    // 6 min/km: 4.25 km is 25.5 minutes, which rounds up to 26; 4.24 km is 25.44, which rounds down to 25
+    await distance.fill('4.25');
+    await expect(duration).toHaveValue('26');
+    await distance.fill('4.24');
+    await expect(duration).toHaveValue('25');
+    await distance.fill('0.05');
+    await expect(duration).toHaveValue('1');
   });
 
   test('a duration you type yourself is kept', async ({ page }) => {
@@ -690,6 +748,25 @@ test.describe('with location allowed', () => {
     await duration.fill('');
     await distance.fill('12');
     await expect(duration).toHaveValue('29');
+  });
+
+  test('a duration you type yourself says so, and is kept when your pace changes', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    await duration.fill('40');
+    await expect(page.locator('#duration-hint')).toHaveText('Your own time, kept if you change the distance. Empty the box to estimate it again.');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('button', { name: 'Running pace 5 seconds faster' }).click();
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    await expect(duration).toHaveValue('40');
+    // Emptying the box leaves it empty until the distance changes, then estimates from the new pace
+    await duration.fill('');
+    await expect(duration).toHaveValue('');
+    await expect(page.locator('#duration-hint')).toHaveText('Estimated from your usual pace of 5:55/km. Change it if you like.');
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('6');
+    // 6 km at 5:55 is 35.5 minutes
+    await expect(duration).toHaveValue('36');
   });
 
   test('the − and + buttons change the distance by 1 km, never below 1 km', async ({ page }) => {
@@ -1244,6 +1321,61 @@ test.describe('settings', () => {
     expect((await saved(page)).profile.name).toBe('Bradley');
   });
 
+  test('your usual pace: changed in Settings, used for the duration, and remembered', async ({ page }) => {
+    await openSettings(page);
+    const settings = page.locator('#settings-screen');
+    const running = settings.getByRole('status', { name: 'Running pace' });
+    const cycling = settings.getByRole('status', { name: 'Cycling speed' });
+    await expect(running).toHaveText('6:00 /km');
+    await expect(cycling).toHaveText('25 km/h');
+    await settings.getByRole('button', { name: 'Running pace 5 seconds slower' }).click();
+    await expect(running).toHaveText('6:05 /km');
+    for (let i = 0; i < 5; i++) await settings.getByRole('button', { name: 'Cycling speed 1 km/h faster' }).click();
+    await expect(cycling).toHaveText('30 km/h');
+    await settings.getByRole('button', { name: 'Cycling speed 1 km/h slower' }).click();
+    await expect(cycling).toHaveText('29 km/h');
+    expect((await saved(page)).pace).toEqual({ running: 365, cycling: 29 });
+
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    // 5 km at 6:05/km is 30.4 minutes
+    const duration = page.getByRole('spinbutton', { name: 'Duration' });
+    await expect(duration).toHaveValue('30');
+    await page.getByRole('spinbutton', { name: 'Distance' }).fill('10');
+    await expect(duration).toHaveValue('61');
+    await expect(page.locator('#duration-hint')).toHaveText('Estimated from your usual pace of 6:05/km. Change it if you like.');
+    // 20 km at 29 km/h is 41.4 minutes
+    await page.locator('#plan-screen').getByText('Cycling').click();
+    await expect(duration).toHaveValue('41');
+
+    await page.reload();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(running).toHaveText('6:05 /km');
+    await expect(cycling).toHaveText('29 km/h');
+  });
+
+  test('your usual pace stops at 3:00 to 15:00 /km and 5 to 60 km/h', async ({ page }) => {
+    await openSettings(page, { pace: { running: 185, cycling: 59 } });
+    const settings = page.locator('#settings-screen');
+    const faster = settings.getByRole('button', { name: 'Running pace 5 seconds faster' });
+    await expect(faster).toBeEnabled();
+    await faster.click();
+    await expect(settings.getByRole('status', { name: 'Running pace' })).toHaveText('3:00 /km');
+    await expect(faster).toBeDisabled();
+    const quicker = settings.getByRole('button', { name: 'Cycling speed 1 km/h faster' });
+    await quicker.click();
+    await expect(settings.getByRole('status', { name: 'Cycling speed' })).toHaveText('60 km/h');
+    await expect(quicker).toBeDisabled();
+    expect((await saved(page)).pace).toEqual({ running: 180, cycling: 60 });
+  });
+
+  test('your usual pace: the slow ends are greyed out too, and a saved pace that makes no sense is ignored', async ({ page }) => {
+    await openSettings(page, { pace: { running: 900, cycling: 'fast' } });
+    const settings = page.locator('#settings-screen');
+    await expect(settings.getByRole('status', { name: 'Running pace' })).toHaveText('15:00 /km');
+    await expect(settings.getByRole('button', { name: 'Running pace 5 seconds slower' })).toBeDisabled();
+    await expect(settings.getByRole('status', { name: 'Cycling speed' })).toHaveText('25 km/h');
+  });
+
   test('what the app has learned, in plain words', async ({ page }) => {
     await openSettings(page, { offsets: { running: 1.5, cycling: -0.5 } });
     const rows = page.locator('#learned .learned-row');
@@ -1496,5 +1628,8 @@ test.describe('releases', () => {
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')));
     expect(saved.profile).toEqual({ name: 'Bradley', warmth: 'cold' });
     expect(saved.offsets).toEqual({ running: 1.5, cycling: -0.5 });
+    // Saved before "Your usual pace" existed, so it starts at 6:00 /km and 25 km/h
+    await expect(page.getByRole('spinbutton', { name: 'Duration' })).toHaveValue('30');
+    await expect(page.locator('#duration-hint')).toHaveText('Estimated from your usual pace of 6:00/km. Change it if you like.');
   });
 });

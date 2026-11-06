@@ -12,8 +12,10 @@
 
   const el = (id) => document.getElementById(id);
   const WARMTH = ['hot', 'neutral', 'cold'];
-  // Minutes per km, used to pre-fill the duration: running about 6 min/km, cycling about 25 km/h
-  const PACE = { running: 6, cycling: 60 / 25 };
+  // Your usual pace, used to estimate the duration: running in seconds per km, cycling in km/h.
+  // Starts at 6:00 per km and 25 km/h, changed with − and + within these limits.
+  const DEFAULT_PACE = { running: 360, cycling: 25 };
+  const PACE_LIMITS = { running: { min: 180, max: 900 }, cycling: { min: 5, max: 60 } };
   const DAYS_AHEAD = 5;
   // The distance shown the first time you pick each activity (km)
   const DEFAULT_DISTANCE = { running: 5, cycling: 20 };
@@ -29,11 +31,13 @@
   // ratings: every rating you've given, with its forecast, effort, distance and duration
   // outfits: recent outfits you haven't rated yet, so you can come back and rate them after the session
   // distances: the last distance you entered for each activity, shown again when you switch to it (km)
+  // pace: your usual pace, used to estimate the duration (running seconds per km, cycling km/h)
   // rules: your rules of thumb, the dressing temperatures where each item starts (changed in Settings)
   const state = {
     activity: 'running', profile: null, location: null, weather: null, session: null,
     offsets: { running: 0, cycling: 0 }, ratings: [], outfits: [],
     distances: { ...DEFAULT_DISTANCE },
+    pace: { ...DEFAULT_PACE },
     rules: window.Clothing.checkRules(null),
   };
   // Where the forecast on Your outfit is for, and the dressing temperature it gave
@@ -68,6 +72,13 @@
           if (typeof km === 'number' && km > 0 && km <= 500) state.distances[activity] = km;
         }
       }
+      if (saved.pace) {
+        for (const activity of ['running', 'cycling']) {
+          const n = saved.pace[activity];
+          const { min, max } = PACE_LIMITS[activity];
+          if (Number.isInteger(n) && n >= min && n <= max) state.pace[activity] = n;
+        }
+      }
       if (Array.isArray(saved.ratings)) state.ratings = saved.ratings;
       state.rules = window.Clothing.checkRules(saved.rules);
       if (Array.isArray(saved.outfits)) {
@@ -85,7 +96,7 @@
       const location = state.location && state.location.source === 'search' ? state.location : null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         activity: state.activity, profile: state.profile, location,
-        offsets: state.offsets, distances: state.distances, ratings: state.ratings, outfits: state.outfits, rules: state.rules,
+        offsets: state.offsets, distances: state.distances, pace: state.pace, ratings: state.ratings, outfits: state.outfits, rules: state.rules,
       }));
     } catch (e) { /* not remembered, but the page still works */ }
   }
@@ -199,11 +210,55 @@
     return Number.isFinite(n) && n > 0 && n <= max ? n : null;
   }
 
-  // Duration starts as distance × pace, until you type your own
+  // Your usual pace as shown, e.g. "5:50/km" for running or "25 km/h" for cycling
+  function paceText(activity) {
+    const n = state.pace[activity];
+    if (activity === 'cycling') return `${n} km/h`;
+    return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}/km`;
+  }
+
+  // Minutes a distance takes at your usual pace: running km × pace, cycling km ÷ speed
+  function estimateMinutes(km, activity) {
+    const minutes = activity === 'cycling' ? km / state.pace.cycling * 60 : km * state.pace.running / 60;
+    return Math.max(1, Math.round(minutes));
+  }
+
+  // Duration starts as distance at your usual pace, until you type your own
   function fillDuration() {
-    if (durationTyped) return;
-    const km = readNumber(el('distance'), 500);
-    el('duration').value = km ? Math.max(1, Math.round(km * PACE[state.activity])) : '';
+    if (!durationTyped) {
+      const km = readNumber(el('distance'), 500);
+      el('duration').value = km ? estimateMinutes(km, state.activity) : '';
+    }
+    showDurationHint();
+  }
+
+  // Says how the duration was worked out
+  function showDurationHint() {
+    const what = state.activity === 'cycling' ? 'speed' : 'pace';
+    el('duration-hint').textContent = durationTyped
+      ? 'Your own time, kept if you change the distance. Empty the box to estimate it again.'
+      : `Estimated from your usual ${what} of ${paceText(state.activity)}. Change it if you like.`;
+  }
+
+  // The − and + for your usual pace, on Getting to know you and in Settings
+  function showPace() {
+    for (const stepper of document.querySelectorAll('.pace-stepper')) {
+      const activity = stepper.dataset.pace;
+      const { min, max } = PACE_LIMITS[activity];
+      stepper.querySelector('output').textContent = paceText(activity).replace('/km', ' /km');
+      for (const button of stepper.querySelectorAll('button')) {
+        const step = Number(button.dataset.step);
+        button.disabled = step < 0 ? state.pace[activity] <= min : state.pace[activity] >= max;
+      }
+    }
+    fillDuration();
+  }
+
+  function stepPace(activity, step) {
+    const { min, max } = PACE_LIMITS[activity];
+    state.pace[activity] = Math.min(max, Math.max(min, state.pace[activity] + step));
+    save();
+    showPace();
   }
 
   // Remember the distance you've entered for this activity (only one that makes sense)
@@ -959,9 +1014,15 @@
     el('distance-down').addEventListener('click', () => stepDistance(-1));
     el('distance-up').addEventListener('click', () => stepDistance(1));
     el('duration').addEventListener('input', () => {
-      // Emptying the box hands the duration back to the distance next time it changes
+      // Emptying the box hands the duration back to your usual pace next time the distance changes
       durationTyped = el('duration').value !== '';
+      showDurationHint();
     });
+    // Your usual pace: the − and + on Getting to know you and in Settings
+    for (const button of document.querySelectorAll('.pace-stepper button')) {
+      button.addEventListener('click', () => stepPace(button.closest('.pace-stepper').dataset.pace, Number(button.dataset.step)));
+    }
+    showPace();
     // Tapping anywhere in the distance or duration box (even on "km" or "min") puts the cursor in it
     for (const box of document.querySelectorAll('.unit-input')) {
       box.addEventListener('click', (event) => {
