@@ -6,6 +6,8 @@ Read this first in every session.
 
 A personal app for Bradley that says exactly what to wear for a run or bike ride in London, up to 5 days ahead, and learns from how each outfit felt. It is a web app added to the iPhone home screen, hosted free on GitHub Pages (https://bjg-code.github.io/what-to-wear/). It costs £0 to run: no accounts, no AI calls inside the app, and all personal data stays on the phone in the browser's local storage.
 
+After v1.0, a small group of friends (up to 10, most likely about 5) trial it through the same link: see "Trial with a small group" in `docs/spec.md`. Each person's data stays on their own phone, and every release reaches all of them, so never lose saved data.
+
 ## Source of truth
 
 - **`docs/spec.md` is the source of truth.** Read the parts that matter for today's feature before writing code.
