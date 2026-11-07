@@ -26,3 +26,5 @@ The full detail is in [docs/spec.md](docs/spec.md).
 - Reminders, widgets, Apple Watch
 - Accounts and syncing between devices
 - A native iPhone app (needs a personal Mac)
+- Open even with no signal, showing the last outfit
+- Watch whether Open-Meteo runs warm for early mornings (1–2 °C above BBC and Metcheck on 8 Nov); the learned offset should correct it

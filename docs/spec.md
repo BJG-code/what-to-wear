@@ -227,17 +227,22 @@ A web app added to the iPhone's home screen, written by Claude Code in the cloud
 
 v1.0 is done when every box below is ticked on my own iPhone.
 
-- [ ] First launch shows "Getting to know you"; the profile survives closing and re-opening the app
-- [ ] Day picker allows today plus up to 5 days and nothing later
-- [ ] "What should I wear?" only works once day, time, distance, duration and effort are all set
-- [ ] Plan a session greets me by name
-- [ ] Forecast shown matches Open-Meteo for my location and chosen hour
-- [ ] Running and cycling give different outfits for the same weather
-- [ ] Each threshold in Outfit rules produces the item listed (checked at the boundaries, e.g. 7 and 8 °C)
+- [x] First launch shows "Getting to know you"; the profile survives closing and re-opening the app
+- [x] Day picker allows today plus up to 5 days and nothing later
+- [x] "What should I wear?" only works once day, time, distance, duration and effort are all set
+- [x] Plan a session greets me by name
+- [x] Forecast shown matches Open-Meteo for my location and chosen hour
+- [x] Running and cycling give different outfits for the same weather
+- [x] Each threshold in Outfit rules produces the item listed (checked at the boundaries, e.g. 7 and 8 °C)
 - [ ] Notes appear only when they apply, for both activities, including weather changes during the session
 - [ ] Each feedback rating moves the learned offset as specified, and Reset sets it to 0
-- [ ] With location refused or no signal, the app explains itself instead of crashing
+- [x] With location refused or no signal, the app explains itself instead of crashing
 - [ ] Used before at least 3 runs and 2 rides, with feedback logged
+
+v1.0 accepted 7 Nov 2026, with three items carried to 15 Nov 2026:
+
+- 8 (cycling notes and mid-session weather changes) and 9 (a rating moving the offset) are covered by automated tests and will be confirmed in real use;
+- 11 needs one more run and two rides.
 
 ## References
 
