@@ -103,6 +103,20 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 - [x] B2. A new release could take about 10 minutes to reach the phone after merging. Done 6 Nov 2026: opening the app (or coming back to it) checks for a newer release and loads it straight away, but never while you're looking at an outfit or Settings. (Was C2; renamed B2 as a follow-up to B1.)
 
+## Trial with a small group (agreed 7 Nov 2026)
+
+Before inviting up to 10 friends (most likely about 5) to try the app through the shareable link. Details in the spec under "Trial with a small group". Build these in order, one per session, once v1.0 criterion 11 is ticked. Aim: all live and invites sent by Sun 22 Nov 2026.
+
+| Session | Builds | Gaps |
+| --- | --- | --- |
+| 12 | "Send my ratings" in Settings | T1 |
+| 13 | Install on Android, and a first-visit "add to home screen" hint | T2 |
+| 14 | "About this app" in Settings, and README updated for trialists | T3 |
+
+- [ ] T1. Trialists' ratings never leave their phones, so there's no way to learn from the trial. Add "Send my ratings" in Settings: opens the phone's share sheet with a plain-text summary (profile type, usual pace, learned offsets, and each rating with date, activity, forecast, effort, distance, duration and outfit); copies it instead if sharing isn't available. No name unless they add it, and no email address in the code.
+- [ ] T2. Android can't install the app properly (it has only the iPhone icon), and someone opening the link in a browser isn't told how to add it to the home screen. Add the description file Android needs (name, icons, colours, opens full screen) and a closable first-visit hint with the Safari and Chrome steps, shown only in the browser, not from the home screen.
+- [ ] T3. Nothing in the app says what it is, that it's a trial, or what happens to your data. Add "About this app" to Settings (data stays on the phone, deleting the app or clearing website data wipes it, forecast from Open-Meteo using your location, how to send feedback), and update the README's "How to use it" for trialists, including Android.
+
 ## Open questions
 
 - [x] Thresholds are whole numbers (6 to 10, 5 or below), so 10.5 °C has no clear answer. Decided 31 Oct 2026: round the dressing temperature to the nearest whole degree (halves round up), and use that rounded number for the outfit. Added to the spec.

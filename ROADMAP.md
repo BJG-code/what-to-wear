@@ -15,6 +15,16 @@ The full detail is in [docs/spec.md](docs/spec.md).
 
 **Done when:** installed on the iPhone by Sun 22 Nov 2026, used before real runs and rides, and rated "Perfect" on most sessions after two weeks of feedback.
 
+## Next: trial with a small group
+
+Up to 10 friends (most likely about 5) try the app for two weeks through the shareable link, from about Sun 22 Nov 2026. Still free: no accounts, no app store, everyone's data stays on their own phone. First, three small changes:
+
+- Send my ratings: a button in Settings to send your ratings back by message or email
+- Install on Android, and a hint on first visit explaining how to add the app to the home screen
+- About this app: a short note in Settings on what happens to your data
+
+The review at the end (about Sun 6 Dec 2026) decides whether an app store download is worth it.
+
 ## Ideas for later versions (v1.1 and beyond)
 
 - Smarter learning from the saved ratings
@@ -25,7 +35,7 @@ The full detail is in [docs/spec.md](docs/spec.md).
 - An AI-written summary from Claude (costs per use)
 - Reminders, widgets, Apple Watch
 - Accounts and syncing between devices
-- A native iPhone app (needs a personal Mac)
+- A native iPhone app or an app store download (needs a personal Mac and an Apple developer account, about £79 a year), only if the trial shows it's worth it
 - Open even with no signal, showing the last outfit
 - "Dark from" uses hourly data, so can be up to an hour late: use Open-Meteo's exact sunset time
 - Watch whether Open-Meteo runs warm for early mornings (1–2 °C above BBC and Metcheck on 8 Nov); the learned offset should correct it

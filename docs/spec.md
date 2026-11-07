@@ -1,6 +1,6 @@
 # What to wear — v1.0 product spec
 
-27 Oct 2026 · Bradley Gladden · updated 31 Oct 2026
+27 Oct 2026 · Bradley Gladden · updated 7 Nov 2026
 
 **Changes since 27 Oct 2026** (agreed 31 Oct 2026)
 
@@ -18,6 +18,7 @@
 - **B1 (agreed 6 Nov 2026):** every release has a version number (e.g. 2026.11.06.1), shown in small text at the bottom of Settings as "Version 2026.11.06.1". Each release makes the phone load fresh files, and nothing saved on the phone is lost.
 - **B2 (agreed 6 Nov 2026, a follow-up to B1):** when you open the app, or come back to it, it checks whether a newer release is live and, if so, loads it straight away. It never does this while you're looking at Your outfit or Settings, and with no signal it carries on with the version already on the phone.
 - **C2 (agreed 6 Nov 2026):** duration is estimated from your own usual pace instead of a fixed one. "Your usual pace" (running pace in min/km, default 6:00; cycling speed in km/h, default 25) is asked on Getting to know you, pre-filled with the defaults, and can be changed in Settings. Plan a session pre-fills the duration from the distance and that pace and says how, e.g. "Estimated from your usual pace of 5:50/km. Change it if you like." The duration stays editable, and a number you type yourself is kept.
+- **Trial (agreed 7 Nov 2026):** after v1.0, the app is trialled by a small group of friends (up to 10, most likely about 5) using the shareable link. Three small changes come first: a way to send your ratings back (T1), installing on Android and a first-visit "add to home screen" hint (T2), and an "About this app" note in Settings saying what happens to your data (T3). See "Trial with a small group" below. No accounts, no app store and still £0.
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -26,7 +27,7 @@ What to wear tells a runner or cyclist exactly what to put on for a session up t
 
 - **Problem:** London weather makes kit choice a guess. Too many layers and you overheat; too few and the first 20 minutes are miserable.
 - **Objective:** one clear outfit recommendation in under 30 seconds, which gets more accurate the more you use it.
-- **Audience:** v1.0 is a personal app for one user (me), running and cycling in London. Other runners and cyclists are a later possibility, not a v1.0 goal.
+- **Audience:** v1.0 is a personal app for one user (me), running and cycling in London. Other runners and cyclists are a later possibility, not a v1.0 goal. After v1.0, a small group of friends trial it through the shareable link (see "Trial with a small group").
 - **Learning goal:** build it with Claude as a first vibe-coding project, understanding each step well enough to explain it.
 
 **Success for v1.0:** installed on my iPhone by Sun 22 Nov 2026, used before real runs and rides, and rated "Perfect" on most sessions after two weeks of feedback.
@@ -222,6 +223,41 @@ A web app added to the iPhone's home screen, written by Claude Code in the cloud
 - Data saved on the phone lives in Safari's storage for that web address; removing the home-screen app or clearing website data wipes it.
 - Forecasts are limited to 5 days ahead by design.
 - No AI calls inside the app, so no usage costs.
+
+## Trial with a small group
+
+After v1.0, a few friends try the app through the shareable link before anything bigger, such as an app store download, is considered.
+
+**Who and how long**
+
+- Up to 10 people, most likely about 5, who run or cycle. iPhone first; Android also supported.
+- Two weeks of real sessions each, ideally at least 3 rated sessions per person.
+- Starts once v1.0 criterion 11 is ticked (due 15 Nov 2026) and T1 to T3 below are live. Aim: invites sent by Sun 22 Nov 2026, trial review by Sun 6 Dec 2026.
+
+**How it works**
+
+- Everyone uses the same link: https://bjg-code.github.io/what-to-wear/. There is no sign-up and no invite code; the link is public but only shared with the group.
+- Each person's profile, pace, learned offsets and ratings stay on their own phone, so people never see or affect each other's data.
+- Everyone gets each new release as soon as they open the app (B2), so every merge goes to the whole group. The automated checks must pass first, as always, and saved data must never be lost.
+- Weather still comes from Open-Meteo for free; a handful of people stays far inside its free limits.
+- Still £0: no accounts, no server, no app store.
+
+**Changes before the trial**
+
+| Change | What it does |
+| --- | --- |
+| T1. Send my ratings | A "Send my ratings" button in Settings opens the phone's share sheet (Messages, WhatsApp, email…) with a plain-text summary: hot / neutral / cold, usual pace, learned offsets, and each rating with its date, activity, forecast, effort, distance, duration and outfit. Nothing is sent unless the person taps it, and it never includes their name unless they add it. If sharing isn't available, the summary is copied so it can be pasted. No email address is written into the app, as the code is public. |
+| T2. Install on Android, and a first-visit hint | The app gets the small description file Android needs to install it with its own icon, name and colours. When the site is opened in the browser rather than from the home screen, a short hint explains how to add it (Safari: Share, then Add to Home Screen; Chrome: menu, then Add to Home screen or Install app). It can be closed and doesn't come back. |
+| T3. About this app | A short "About this app" part of Settings: what the app does, that it's a trial, that everything stays on your phone (and deleting the home-screen app or clearing website data wipes it), that the forecast comes from Open-Meteo using your location, and how to send feedback (T1). |
+
+**What Bradley does (no code)**
+
+- Picks the group and sends each person the link with a short message: how to add it to the home screen, to rate every session after it's finished, and to tap "Send my ratings" at the end of the two weeks.
+- Optionally asks three questions at the end: was the outfit right most of the time, was anything confusing, would you keep using it.
+
+**Trial success:** most people still using it after two weeks, and most ratings "Perfect" by the second week. The review decides whether to move to an app store download (in "Later" under Scope), stay as a shareable link, or change the rules first.
+
+**Not in the trial:** accounts, syncing, an app store download, collecting data automatically, and a server of any kind.
 
 ## Acceptance criteria
 
