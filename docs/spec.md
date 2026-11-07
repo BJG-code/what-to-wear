@@ -234,15 +234,12 @@ v1.0 is done when every box below is ticked on my own iPhone.
 - [x] Forecast shown matches Open-Meteo for my location and chosen hour
 - [x] Running and cycling give different outfits for the same weather
 - [x] Each threshold in Outfit rules produces the item listed (checked at the boundaries, e.g. 7 and 8 °C)
-- [ ] Notes appear only when they apply, for both activities, including weather changes during the session
-- [ ] Each feedback rating moves the learned offset as specified, and Reset sets it to 0
+- [x] Notes appear only when they apply, for both activities, including weather changes during the session
+- [x] Each feedback rating moves the learned offset as specified, and Reset sets it to 0
 - [x] With location refused or no signal, the app explains itself instead of crashing
 - [ ] Used before at least 3 runs and 2 rides, with feedback logged
 
-v1.0 accepted 7 Nov 2026, with three items carried to 15 Nov 2026:
-
-- 8 (cycling notes and mid-session weather changes) and 9 (a rating moving the offset) are covered by automated tests and will be confirmed in real use;
-- 11 needs one more run and two rides.
+v1.0 accepted 7 Nov 2026. Criterion 11 is carried to 15 Nov 2026: 2 runs logged so far (both Perfect), needs 1 more run and 2 rides.
 
 ## References
 
