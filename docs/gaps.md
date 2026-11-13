@@ -97,13 +97,15 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 - [x] C2. Duration was always estimated at 6 min/km for running and 25 km/h for cycling, whatever your own pace. Done 6 Nov 2026: "Your usual pace" is asked on Getting to know you and can be changed in Settings, and Plan a session estimates the duration from it and says so.
 
-- [x] C3. People didn't understand how a rating changes the next outfit: one rating moves the dressing temperature only 0.5°, so the kit often stays the same, and "Learned −0.5°" in the breakdown read backwards (minus means warmer). Agreed 13 Nov 2026. Done 13 Nov 2026: the thank-you says what will happen and why the kit may not change yet, the breakdown says "From your ratings: 0.5° warmer / lighter / no change yet", and Settings has a short "How learning works" note. How learning works is unchanged. Follow-up 13 Nov 2026: "From your ratings" became "From your previous feedback", and the "What the app has learned" heading is easier to see (now bold accent purple).
+- [x] C3. People didn't understand how a rating changes the next outfit: one rating moves the dressing temperature only 0.5°, so the kit often stays the same, and "Learned −0.5°" in the breakdown read backwards (minus means warmer). Agreed 13 Nov 2026. Done 13 Nov 2026: the thank-you says what will happen and why the kit may not change yet, the breakdown says "From your ratings: 0.5° warmer / lighter / no change yet", and Settings has a short "How learning works" note. How learning works is unchanged. Follow-up 13 Nov 2026: "From your ratings" became "From your previous feedback", and the "What the app has learned" heading is easier to see (now bold accent purple, the same size as "Running" below it, with a purple line halfway across).
 
 ## Bugs
 
 - [x] B1. After a merge, the iPhone home-screen app kept showing the old version, because it reused its saved copies of weather.js, clothing.js and app.js. Done 6 Nov 2026: each release has a version number on its file links so the phone fetches fresh copies, Settings shows the version, and the automated checks fail if a change to the app forgets to update it.
 
 - [x] B2. A new release could take about 10 minutes to reach the phone after merging. Done 6 Nov 2026: opening the app (or coming back to it) checks for a newer release and loads it straight away, but never while you're looking at an outfit or Settings. (Was C2; renamed B2 as a follow-up to B1.)
+
+- [x] B3. On a narrow iPhone screen (about 320 points wide, e.g. with Display Zoom on), the + buttons for running pace and cycling speed stuck out past the right edge of their card. Found on Bradley's phone 13 Nov 2026. Done 13 Nov 2026: the − / + steppers are slightly tighter, so they fit beside their label, which wraps onto two lines if needed.
 
 ## Trial with a small group (agreed 7 Nov 2026)
 
