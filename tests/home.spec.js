@@ -1889,6 +1889,54 @@ test.describe('send my ratings', () => {
   });
 });
 
+test.describe('about this app', () => {
+  test.use({ geolocation: LONDON, permissions: ['geolocation'] });
+
+  async function openSettings(page) {
+    await mockServices(page);
+    await withProfile(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    return page.getByRole('region', { name: 'About this app' });
+  }
+
+  test('Settings says what the app is, that it\'s a trial, and what happens to your data', async ({ page }) => {
+    const about = await openSettings(page);
+    await expect(about).toBeVisible();
+    await expect(about).toContainText('what to wear for a run or bike ride, up to 5 days ahead');
+    await expect(about).toContainText('It\'s a trial');
+    await expect(about).toContainText('Your data stays on this phone');
+    await expect(about).toContainText('nothing you enter is sent anywhere unless you tap Send my ratings');
+    await expect(about).toContainText('Deleting the home-screen app, or clearing this website\'s data');
+    await expect(about).toContainText('Open-Meteo');
+    await expect(about).toContainText('your location');
+    await expect(about).toContainText('tap Send my ratings above');
+  });
+
+  test('it comes after Your ratings, with the version still last', async ({ page }) => {
+    await openSettings(page);
+    const order = await page.evaluate(() => {
+      const ids = ['settings-send-label', 'settings-about-label', 'app-version'];
+      return ids.map((id) => [...document.querySelectorAll('#settings-screen *')].indexOf(document.getElementById(id)));
+    });
+    expect(order[0]).toBeLessThan(order[1]);
+    expect(order[1]).toBeLessThan(order[2]);
+  });
+
+  test('it has no email address in it, as the code is public', async ({ page }) => {
+    const about = await openSettings(page);
+    await expect(about).not.toContainText('@');
+  });
+
+  test('it fits a narrow phone without scrolling sideways', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    const about = await openSettings(page);
+    await about.scrollIntoViewIfNeeded();
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(320);
+  });
+});
+
 test.describe('releases', () => {
   test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
 
