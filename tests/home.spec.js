@@ -1404,11 +1404,20 @@ test.describe('settings', () => {
     await openSettings(page);
     const note = page.locator('#settings-screen .how-learning');
     await expect(note.locator('strong')).toHaveText('How learning works');
-    // The heading above the learned rows is as bold as the note, and purple
+    // The heading above the learned rows is purple, bold and the same size as "Running" below it
     const heading = page.locator('#settings-learned-label');
     await expect(heading).toHaveText('What the app has learned');
-    await expect(heading).toHaveCSS('font-weight', await note.locator('strong').evaluate((e) => getComputedStyle(e).fontWeight));
     await expect(heading).toHaveCSS('color', 'rgb(196, 167, 255)');
+    await expect(heading).toHaveCSS('font-weight', '700');
+    const running = page.locator('#learned .learned-row strong').first();
+    await expect(heading).toHaveCSS('font-size', await running.evaluate((e) => getComputedStyle(e).fontSize));
+    // A purple line under it, halfway across
+    const line = await heading.evaluate((e) => {
+      const after = getComputedStyle(e, '::after');
+      return { width: parseFloat(after.width), color: after.backgroundColor, full: e.getBoundingClientRect().width };
+    });
+    expect(line.color).toBe('rgb(196, 167, 255)');
+    expect(line.width).toBeCloseTo(line.full / 2, 0);
     await expect(note.locator('li')).toHaveText([
       'Too hot → future outfits 0.5° lighter.',
       'Perfect → no change.',
@@ -1508,6 +1517,22 @@ test.describe('settings', () => {
     const data = await saved(page);
     expect(data.rules.running.shorts).toBe(8);
     expect(data.rules.cycling.shorts).toBe(14);
+  });
+
+  test('on a narrow screen (iPhone Display Zoom), the pace − and + stay inside their card', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    // The slowest running pace and fastest cycling speed are the widest numbers
+    await openSettings(page, { pace: { running: 900, cycling: 60 } });
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(320);
+    for (const stepper of await page.locator('#settings-screen .pace-stepper').all()) {
+      const fits = await stepper.evaluate((e) => {
+        const row = e.closest('.settings-row').getBoundingClientRect();
+        const box = e.getBoundingClientRect();
+        return box.left >= row.left && box.right <= row.right + 0.5;
+      });
+      expect(fits).toBe(true);
+    }
   });
 
   test('settings fit the screen and don\'t scroll sideways', async ({ page }) => {

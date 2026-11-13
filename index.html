@@ -12,8 +12,8 @@
   <title>What to wear</title>
   <!-- The version of this release. Change it in every pull request that changes the app
        (here and in the ?v= on the files at the bottom), so the phone fetches fresh copies
-       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.3 -->
-  <meta name="app-version" content="2026.11.13.3">
+       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.4 -->
+  <meta name="app-version" content="2026.11.13.4">
   <!-- The app's icon on the iPhone home screen, and in the browser tab -->
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="assets/apple-touch-icon.png">
@@ -847,14 +847,16 @@
     }
 
     /* Your usual pace: − 6:00 /km + */
+    /* Tight enough to fit beside its label on narrow screens (e.g. iPhone Display Zoom) */
     .pace-stepper {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      flex-shrink: 0;
     }
 
     .pace-stepper output {
-      min-width: 5.5em;
+      min-width: 4.75em;
       text-align: center;
       font-weight: 700;
     }
@@ -872,10 +874,26 @@
       color: var(--purple-light);
     }
 
-    /* A key feature, so it stands out in purple and splits the page halfway */
+    /* A key feature, so it stands out in purple, the same size as "Running" below it,
+       with a purple line halfway across the page that splits Settings in two */
     .learned-label {
       color: var(--purple-light);
-      font-weight: 600;
+      font-size: inherit;
+      font-weight: 700;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .learned-label::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 50%;
+      height: 2px;
+      border-radius: 1px;
+      background: var(--purple-light);
     }
 
     .how-learning strong {
@@ -1295,8 +1313,8 @@
   </main>
 
   <!-- The ?v= must match app-version at the top, so each release loads fresh files -->
-  <script src="weather.js?v=2026.11.13.3"></script>
-  <script src="clothing.js?v=2026.11.13.3"></script>
-  <script src="app.js?v=2026.11.13.3"></script>
+  <script src="weather.js?v=2026.11.13.4"></script>
+  <script src="clothing.js?v=2026.11.13.4"></script>
+  <script src="app.js?v=2026.11.13.4"></script>
 </body>
 </html>
