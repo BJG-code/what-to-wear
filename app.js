@@ -786,6 +786,8 @@
     openRule = null;
     showLearned();
     showRules();
+    el('send-status').hidden = true;
+    el('send-text').hidden = true;
     showScreen('settings');
   }
 
@@ -938,10 +940,104 @@
     location.replace(`${location.pathname}?v=${encodeURIComponent(live)}`);
   }
 
+  // Send my ratings: a plain-text summary for the trial, with no name in it.
+  // Profile type, usual pace, learned offsets, then each rating with its forecast and outfit.
+  function ratingsSummary() {
+    const warmth = { hot: 'Runs hot', neutral: 'Neutral', cold: 'Runs cold' };
+    const effortName = (effort) => (effort ? effort[0].toUpperCase() + effort.slice(1) : '–');
+    const degrees = (n) => (typeof n === 'number' ? `${wholeDegrees(n)}°C` : '–');
+    const amount = (n, unit) => (typeof n === 'number' ? `${Math.round(n)}${unit}` : '–');
+    const lines = [
+      'What to wear: my ratings',
+      `Version ${APP_VERSION}`,
+      '',
+      `Hot or cold: ${warmth[state.profile ? state.profile.warmth : 'neutral']}`,
+      `Usual pace: running ${paceText('running')} · cycling ${paceText('cycling')}`,
+      `Learned from ratings: running ${offsetText(state.offsets.running)} · cycling ${offsetText(state.offsets.cycling)}`,
+      '(plus means dressed lighter, minus means dressed warmer)',
+      '',
+    ];
+    if (!state.ratings.length) {
+      lines.push('No ratings yet.');
+      return lines.join('\n');
+    }
+    lines.push(`Ratings (${state.ratings.length})`);
+    state.ratings.forEach((r, i) => {
+      const kind = r.activity === 'cycling' ? 'Ride' : 'Run';
+      let when = r.start || '–';
+      if (r.start) {
+        const session = restoreSession({ startText: r.start });
+        const day = session.start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        when = `${day.replace(',', '')}, ${r.start.slice(11, 16)}`;
+      }
+      lines.push('', `${i + 1}. ${when} · ${kind} · ${RATINGS[r.rating] || r.rating}`);
+      lines.push(`${effortName(r.effort)} · ${r.distance} km · ${r.duration} min · ${warmth[r.warmth] || 'Neutral'}`);
+      const f = r.forecast;
+      if (f && f.start) {
+        const h = f.start;
+        lines.push(`Forecast: ${degrees(h.temperature)}, feels like ${degrees(h.feelsLike)} · `
+          + `wind ${amount(h.windSpeed, ' km/h')}, gusts ${amount(f.worstGusts, ' km/h')} · `
+          + `rain ${amount(f.worstRainChance, '%')} · cloud ${amount(h.cloudCover, '%')} · `
+          + `humidity ${amount(h.humidity, '%')} · ${h.isDay ? 'daylight' : 'dark'}`);
+      }
+      lines.push(`Dressing temp: ${degrees(r.dressingTemp)} · learned before: ${offsetText(r.learnedBefore || 0)}`);
+      lines.push(`Outfit: ${ratedOutfit(r)}`);
+    });
+    return lines.join('\n');
+  }
+
+  // The outfit a rating was for, worked out again from what was saved with it, e.g. "Long sleeve, Shorts, Headband"
+  function ratedOutfit(r) {
+    const f = r.forecast;
+    if (!f || !f.start || typeof r.dressingTemp !== 'number') return '–';
+    const activity = r.activity === 'cycling' ? 'cycling' : 'running';
+    const rules = { ...window.Clothing.DEFAULT_RULES, [activity]: r.rules || window.Clothing.DEFAULT_RULES[activity] };
+    const weather = {
+      temperature: f.start.temperature, cloudCover: f.start.cloudCover, isDay: f.start.isDay,
+      gusts: f.worstGusts, rainChance: f.worstRainChance,
+    };
+    try {
+      const { items } = window.Clothing.recommend({ activity, dressingTemp: r.dressingTemp, weather, rules });
+      return items.map((i) => i.item).join(', ') || '–';
+    } catch (error) {
+      return '–';
+    }
+  }
+
+  // Opens the phone's share sheet (Messages, WhatsApp, email…). Without one, copies the summary instead,
+  // and if even that isn't possible, shows it so it can be copied by hand.
+  async function sendRatings() {
+    const text = ratingsSummary();
+    const status = (message) => {
+      el('send-status').textContent = message;
+      el('send-status').hidden = !message;
+    };
+    status('');
+    el('send-text').hidden = true;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'What to wear: my ratings', text });
+        return;
+      } catch (error) {
+        // Closing the share sheet isn't a problem: nothing was sent, and that's fine
+        if (error && error.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      status('Copied. Paste it into a message or email.');
+    } catch (error) {
+      el('send-text').value = text;
+      el('send-text').hidden = false;
+      status('Couldn\'t share or copy it, so here it is to copy by hand.');
+    }
+  }
+
   function initSettings() {
     // The version label at the bottom of Settings, e.g. "Version 2026.11.06.1"
     el('app-version').textContent = `Version ${APP_VERSION}`;
     el('open-settings').addEventListener('click', openSettings);
+    el('send-ratings').addEventListener('click', sendRatings);
     el('settings-back').addEventListener('click', () => history.back());
     el('settings-name').addEventListener('input', nameTyped);
     el('settings-name').addEventListener('change', nameDone);

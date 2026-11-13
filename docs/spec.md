@@ -279,9 +279,9 @@ v1.0 is done when every box below is ticked on my own iPhone.
 - [x] Notes appear only when they apply, for both activities, including weather changes during the session
 - [x] Each feedback rating moves the learned offset as specified, and Reset sets it to 0
 - [x] With location refused or no signal, the app explains itself instead of crashing
-- [ ] Used before at least 3 runs and 2 rides, with feedback logged
+- [x] Used before at least 3 runs and 2 rides, with feedback logged
 
-v1.0 accepted 7 Nov 2026. Criterion 11 is carried to 15 Nov 2026: 2 runs logged so far (both Perfect), needs 1 more run and 2 rides.
+v1.0 accepted 7 Nov 2026. Criterion 11 was carried to 15 Nov 2026 and ticked off 13 Nov 2026 (3 runs and 2 rides with feedback logged), so the trial changes T1 to T3 can start.
 
 ## References
 
