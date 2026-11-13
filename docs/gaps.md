@@ -97,6 +97,8 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 - [x] C2. Duration was always estimated at 6 min/km for running and 25 km/h for cycling, whatever your own pace. Done 6 Nov 2026: "Your usual pace" is asked on Getting to know you and can be changed in Settings, and Plan a session estimates the duration from it and says so.
 
+- [x] C3. People didn't understand how a rating changes the next outfit: one rating moves the dressing temperature only 0.5°, so the kit often stays the same, and "Learned −0.5°" in the breakdown read backwards (minus means warmer). Agreed 13 Nov 2026. Done 13 Nov 2026: the thank-you says what will happen and why the kit may not change yet, the breakdown says "From your ratings: 0.5° warmer / lighter / no change yet", and Settings has a short "How learning works" note. How learning works is unchanged.
+
 ## Bugs
 
 - [x] B1. After a merge, the iPhone home-screen app kept showing the old version, because it reused its saved copies of weather.js, clothing.js and app.js. Done 6 Nov 2026: each release has a version number on its file links so the phone fetches fresh copies, Settings shows the version, and the automated checks fail if a change to the app forgets to update it.

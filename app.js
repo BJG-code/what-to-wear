@@ -523,12 +523,19 @@
     return `${n < 0 ? '−' : '+'}${Math.abs(n)}°`;
   }
 
+  // The learned offset in plain words: a plus means lighter clothes, a minus warmer,
+  // e.g. "0.5° lighter", "1.5° warmer" or "no change yet"
+  function learnedWords(n) {
+    if (n === 0) return 'no change yet';
+    return `${Math.abs(n)}° ${n > 0 ? 'lighter' : 'warmer'}`;
+  }
+
   // How the dressing temperature was worked out, one line at a time, e.g.
-  // "Feels like 6°", "+2° for 8 km", "Easy +0° · Neutral +0°", "Learned +0°"
+  // "Feels like 6°", "+2° for 8 km", "Easy +0° · Neutral +0°", "From your ratings: no change yet"
   function breakdownLines(d, session) {
     const effort = session.effort[0].toUpperCase() + session.effort.slice(1);
     const profile = { hot: 'Runs hot', neutral: 'Neutral', cold: 'Runs cold' }[state.profile ? state.profile.warmth : 'neutral'];
-    const last = [`Learned ${signed(d.learned)}`];
+    const last = [`From your ratings: ${learnedWords(d.learned)}`];
     if (d.chill) last.push(`Bike chill ${signed(-d.chill)}`);
     return [
       `Feels like ${wholeDegrees(d.feelsLike)}°`,
@@ -647,16 +654,18 @@
     if (rating) el('feedback-thanks').textContent = thanksText(rating, justRated === id);
   }
 
-  // What a rating did, in plain words
+  // What a rating did, in plain words, and why the kit may not change straight away
   function thanksText(rating, justNow) {
     if (!justNow) return `You rated this outfit ${RATINGS[rating.rating]}.`;
     const kind = rating.activity === 'cycling' ? 'rides' : 'runs';
-    if (rating.rating === 'perfect') return `Thanks! Your ${kind} will keep dressing you the same way.`;
+    if (rating.rating === 'perfect') return `Thanks! Next time we'll dress you the same way for ${kind}.`;
     if (rating.learnedAfter === rating.learnedBefore) {
-      return `Thanks! That's saved, but your ${kind} are already as far as it goes (${signed(rating.learnedAfter)}).`;
+      return `Thanks! That's saved, but we already dress you ${learnedWords(rating.learnedAfter)} for ${kind}, `
+        + 'the most we go. You can reset it in Settings.';
     }
     const way = rating.rating === 'hot' ? 'lighter' : 'warmer';
-    return `Thanks! Future ${kind} will dress you 0.5° ${way}.`;
+    return `Thanks! Next time we'll dress you 0.5° ${way} for ${kind}. `
+      + 'Small nudges add up: your kit changes once they cross one of your rules of thumb.';
   }
 
   // Too hot / Perfect / Too cold: moves the learned offset and saves the rating with its forecast
