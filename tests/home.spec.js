@@ -1547,6 +1547,183 @@ test.describe('settings', () => {
   });
 });
 
+test.describe('send my ratings', () => {
+  test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
+
+  // Replaces the phone's share sheet and copy with stand-ins that remember what they were given.
+  // share: 'works', 'cancelled', 'fails' or 'missing'. copy: true if copying works.
+  async function fakePhone(page, { share = 'works', copy = true } = {}) {
+    await page.addInitScript(({ share, copy }) => {
+      window.shared = [];
+      window.copied = [];
+      if (share === 'missing') {
+        delete Navigator.prototype.share;
+      } else {
+        Navigator.prototype.share = async (data) => {
+          if (share === 'cancelled') throw new DOMException('Share cancelled', 'AbortError');
+          if (share === 'fails') throw new DOMException('Not allowed', 'NotAllowedError');
+          window.shared.push(data);
+        };
+      }
+      Object.defineProperty(Navigator.prototype, 'clipboard', {
+        configurable: true,
+        get: () => ({
+          writeText: async (text) => {
+            if (!copy) throw new DOMException('Not allowed', 'NotAllowedError');
+            window.copied.push(text);
+          },
+        }),
+      });
+    }, { share, copy });
+  }
+
+  // Rates an easy 8 km run at 07:00 on Mon 2 Nov "Too hot", then opens Settings
+  async function rateThenOpenSettings(page) {
+    await page.clock.install({ time: new Date('2026-11-02T09:00:00Z') });
+    await withProfile(page);
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00' });
+    await page.getByRole('button', { name: 'Too hot' }).click();
+    await page.goBack();
+    await page.getByRole('button', { name: 'Settings' }).click();
+  }
+
+  const sendButton = (page) => page.getByRole('button', { name: 'Send my ratings' });
+
+  test('opens the share sheet with the profile, pace, learned offsets and each rating, without your name', async ({ page }) => {
+    await fakePhone(page);
+    await rateThenOpenSettings(page);
+    const box = await sendButton(page).boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await sendButton(page).click();
+    const shared = await page.evaluate(() => window.shared);
+    expect(shared).toHaveLength(1);
+    expect(shared[0].title).toBe('What to wear: my ratings');
+    const text = shared[0].text;
+    const version = await page.locator('meta[name="app-version"]').getAttribute('content');
+    // Feels like 8.1 + 2 for 8 km = 10 → Long sleeve, Shorts; gusts 25, rain 10%, 80% cloud
+    expect(text).toBe([
+      'What to wear: my ratings',
+      `Version ${version}`,
+      '',
+      'Hot or cold: Neutral',
+      'Usual pace: running 6:00/km · cycling 25 km/h',
+      'Learned from ratings: running +0.5°C · cycling 0.0°C',
+      '(plus means dressed lighter, minus means dressed warmer)',
+      '',
+      'Ratings (1)',
+      '',
+      '1. Mon 2 Nov 2026, 07:00 · Run · Too hot',
+      'Easy · 8 km · 48 min · Neutral',
+      'Forecast: 10°C, feels like 8°C · wind 12 km/h, gusts 25 km/h · rain 10% · cloud 80% · humidity 82% · daylight',
+      'Dressing temp: 10°C · learned before: 0.0°C',
+      'Outfit: Long sleeve, Shorts',
+    ].join('\n'));
+    expect(text).not.toContain('Bradley');
+    expect(text).not.toMatch(/@/);
+    // Shared, so nothing to say and nothing copied
+    await expect(page.locator('#send-status')).toBeHidden();
+    expect(await page.evaluate(() => window.copied)).toEqual([]);
+  });
+
+  test('the outfit is worked out with the rules of thumb saved with each rating, for runs and rides', async ({ page }) => {
+    await fakePhone(page);
+    const forecast = {
+      start: { time: '07:00', temperature: 20, feelsLike: 20, windSpeed: 10, gusts: 45, rainChance: 0,
+        cloudCover: 10, isDay: true, humidity: 50 },
+      hours: [], worstGusts: 45, worstRainChance: 60,
+    };
+    await page.addInitScript((forecast) => {
+      localStorage.setItem('what-to-wear', JSON.stringify({
+        profile: { name: 'Bradley', warmth: 'cold' },
+        offsets: { running: 0, cycling: -1.5 },
+        pace: { running: 330, cycling: 28 },
+        ratings: [
+          // 11 is a T-shirt with the starting rules, but this rating's rules moved the vest down to 11
+          { id: 'a', rating: 'perfect', activity: 'running', start: '2026-11-03T07:00', distance: 5, duration: 30,
+            effort: 'hard', warmth: 'cold', dressingTemp: 11, forecast, learnedBefore: 0, learnedAfter: 0,
+            rules: { vest: 11, tshirt: 10, longSleeve: 6, shorts: 8, headband: 8, hat: 4, gloves: 7 } },
+          // Saved without rules of thumb, so the starting rules are used
+          { id: 'b', rating: 'cold', activity: 'cycling', start: '2026-11-04T18:30', distance: 30, duration: 64,
+            effort: 'medium', warmth: 'cold', dressingTemp: 7, forecast, learnedBefore: -1, learnedAfter: -1.5 },
+        ],
+      }));
+    }, forecast);
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await sendButton(page).click();
+    const text = (await page.evaluate(() => window.shared))[0].text;
+    expect(text).toContain('Hot or cold: Runs cold');
+    expect(text).toContain('Usual pace: running 5:30/km · cycling 28 km/h');
+    expect(text).toContain('Learned from ratings: running 0.0°C · cycling −1.5°C');
+    expect(text).toContain('Ratings (2)');
+    expect(text).toContain('1. Tue 3 Nov 2026, 07:00 · Run · Perfect\nHard · 5 km · 30 min · Runs cold');
+    // Gusts 45 with a dressing temp below 12 adds a gilet; sunny and 20°C adds the sun items
+    expect(text).toContain('Outfit: Vest, Gilet, Shorts, Sun cream, Sunglasses');
+    expect(text).toContain('2. Wed 4 Nov 2026, 18:30 · Ride · Too cold\nMedium · 30 km · 64 min · Runs cold');
+    expect(text).toContain('Dressing temp: 7°C · learned before: −1.0°C');
+    // Rain 60% during the ride adds the waterproof
+    expect(text).toContain('Outfit: Long sleeve, Gilet, Waterproof jacket, Tights, Buff, Gloves, Sun cream, Sunglasses');
+  });
+
+  test('with no ratings yet, says so', async ({ page }) => {
+    await fakePhone(page);
+    await withProfile(page);
+    await mockServices(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await sendButton(page).click();
+    const text = (await page.evaluate(() => window.shared))[0].text;
+    expect(text).toContain('Learned from ratings: running 0.0°C · cycling 0.0°C');
+    expect(text.endsWith('\nNo ratings yet.')).toBe(true);
+  });
+
+  test('without a share sheet, copies the summary instead and says so', async ({ page }) => {
+    await fakePhone(page, { share: 'missing' });
+    await rateThenOpenSettings(page);
+    await sendButton(page).click();
+    await expect(page.locator('#send-status')).toHaveText('Copied. Paste it into a message or email.');
+    const copied = await page.evaluate(() => window.copied);
+    expect(copied).toHaveLength(1);
+    expect(copied[0]).toContain('1. Mon 2 Nov 2026, 07:00 · Run · Too hot');
+    await expect(page.locator('#send-text')).toBeHidden();
+  });
+
+  test('if sharing goes wrong, copies instead', async ({ page }) => {
+    await fakePhone(page, { share: 'fails' });
+    await rateThenOpenSettings(page);
+    await sendButton(page).click();
+    await expect(page.locator('#send-status')).toHaveText('Copied. Paste it into a message or email.');
+    expect(await page.evaluate(() => window.copied)).toHaveLength(1);
+  });
+
+  test('closing the share sheet sends and copies nothing', async ({ page }) => {
+    await fakePhone(page, { share: 'cancelled' });
+    await rateThenOpenSettings(page);
+    await sendButton(page).click();
+    await expect(page.locator('#send-status')).toBeHidden();
+    expect(await page.evaluate(() => window.copied)).toEqual([]);
+  });
+
+  test('if it can\'t be shared or copied, shows it to copy by hand, fitting the screen', async ({ page }) => {
+    await fakePhone(page, { share: 'missing', copy: false });
+    await rateThenOpenSettings(page);
+    await sendButton(page).click();
+    await expect(page.locator('#send-status')).toHaveText('Couldn\'t share or copy it, so here it is to copy by hand.');
+    await expect(page.locator('#send-text')).toBeVisible();
+    await expect(page.locator('#send-text')).toHaveValue(/1\. Mon 2 Nov 2026, 07:00 · Run · Too hot/);
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize().width);
+    // Leaving Settings and coming back starts afresh
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.locator('#send-text')).toBeHidden();
+    await expect(page.locator('#send-status')).toBeHidden();
+  });
+});
+
 test.describe('releases', () => {
   test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
 
