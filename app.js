@@ -531,11 +531,11 @@
   }
 
   // How the dressing temperature was worked out, one line at a time, e.g.
-  // "Feels like 6°", "+2° for 8 km", "Easy +0° · Neutral +0°", "From your ratings: no change yet"
+  // "Feels like 6°", "+2° for 8 km", "Easy +0° · Neutral +0°", "From your previous feedback: no change yet"
   function breakdownLines(d, session) {
     const effort = session.effort[0].toUpperCase() + session.effort.slice(1);
     const profile = { hot: 'Runs hot', neutral: 'Neutral', cold: 'Runs cold' }[state.profile ? state.profile.warmth : 'neutral'];
-    const last = [`From your ratings: ${learnedWords(d.learned)}`];
+    const last = [`From your previous feedback: ${learnedWords(d.learned)}`];
     if (d.chill) last.push(`Bike chill ${signed(-d.chill)}`);
     return [
       `Feels like ${wholeDegrees(d.feelsLike)}°`,

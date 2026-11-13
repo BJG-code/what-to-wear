@@ -97,7 +97,7 @@ Gap 42 (rewriting the old automated checks) happens in every session, alongside 
 
 - [x] C2. Duration was always estimated at 6 min/km for running and 25 km/h for cycling, whatever your own pace. Done 6 Nov 2026: "Your usual pace" is asked on Getting to know you and can be changed in Settings, and Plan a session estimates the duration from it and says so.
 
-- [x] C3. People didn't understand how a rating changes the next outfit: one rating moves the dressing temperature only 0.5°, so the kit often stays the same, and "Learned −0.5°" in the breakdown read backwards (minus means warmer). Agreed 13 Nov 2026. Done 13 Nov 2026: the thank-you says what will happen and why the kit may not change yet, the breakdown says "From your ratings: 0.5° warmer / lighter / no change yet", and Settings has a short "How learning works" note. How learning works is unchanged.
+- [x] C3. People didn't understand how a rating changes the next outfit: one rating moves the dressing temperature only 0.5°, so the kit often stays the same, and "Learned −0.5°" in the breakdown read backwards (minus means warmer). Agreed 13 Nov 2026. Done 13 Nov 2026: the thank-you says what will happen and why the kit may not change yet, the breakdown says "From your ratings: 0.5° warmer / lighter / no change yet", and Settings has a short "How learning works" note. How learning works is unchanged. Follow-up 13 Nov 2026: "From your ratings" became "From your previous feedback", and the "What the app has learned" heading is easier to see.
 
 ## Bugs
 

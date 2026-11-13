@@ -285,7 +285,7 @@ test.describe('with location allowed', () => {
       'Feels like 8°',
       '+2° for 8 km',
       'Easy +0° · Neutral +0°',
-      'From your ratings: no change yet',
+      'From your previous feedback: no change yet',
     ]);
   });
 
@@ -300,7 +300,7 @@ test.describe('with location allowed', () => {
       'Feels like 8°',
       '+2° for 25 km',
       'Hard +4° · Neutral +0°',
-      'From your ratings: no change yet · Bike chill −4°',
+      'From your previous feedback: no change yet · Bike chill −4°',
     ]);
   });
 
@@ -959,7 +959,7 @@ test.describe('runs cold profile', () => {
       'Feels like 8°',
       '+1° for 5 km',
       'Medium +2° · Runs cold −2°',
-      'From your ratings: no change yet',
+      'From your previous feedback: no change yet',
     ]);
   });
 });
@@ -1128,7 +1128,7 @@ test.describe('feedback', () => {
     await openOutfit(page, { time: '12:00' });
     // 10.1 + 0.5 = 10.6, rounded to 11
     await expect(page.locator('#dressing-temp')).toHaveText('11°C');
-    await expect(page.locator('#dressing-parts li').last()).toHaveText('From your ratings: 0.5° lighter');
+    await expect(page.locator('#dressing-parts li').last()).toHaveText('From your previous feedback: 0.5° lighter');
   });
 
   test('Too cold moves it −0.5 °C, Perfect leaves it, and running and cycling are separate', async ({ page }) => {
@@ -1161,7 +1161,7 @@ test.describe('feedback', () => {
     await mockServices(page);
     await page.goto('/');
     await openOutfit(page, { time: '07:00' });
-    await expect(page.locator('#dressing-parts li').last()).toHaveText('From your ratings: 5° lighter');
+    await expect(page.locator('#dressing-parts li').last()).toHaveText('From your previous feedback: 5° lighter');
     await page.getByRole('button', { name: 'Too hot' }).click();
     await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! That\'s saved, but we already dress you 5° lighter for runs, the most we go. You can reset it in Settings.');
     expect((await saved(page)).offsets.running).toBe(5);
@@ -1176,7 +1176,7 @@ test.describe('feedback', () => {
     await mockServices(page);
     await page.goto('/');
     await openOutfit(page, { time: '07:00' });
-    await expect(page.locator('#dressing-parts li').last()).toHaveText('From your ratings: 5° warmer');
+    await expect(page.locator('#dressing-parts li').last()).toHaveText('From your previous feedback: 5° warmer');
     await page.getByRole('button', { name: 'Too cold' }).click();
     await expect(page.locator('#feedback-thanks')).toHaveText('Thanks! That\'s saved, but we already dress you 5° warmer for runs, the most we go. You can reset it in Settings.');
     expect((await saved(page)).offsets.running).toBe(-5);
@@ -1404,6 +1404,11 @@ test.describe('settings', () => {
     await openSettings(page);
     const note = page.locator('#settings-screen .how-learning');
     await expect(note.locator('strong')).toHaveText('How learning works');
+    // The heading above the learned rows is as easy to see as the note
+    const heading = page.locator('#settings-learned-label');
+    await expect(heading).toHaveText('What the app has learned');
+    await expect(heading).toHaveCSS('font-weight', await note.locator('strong').evaluate((e) => getComputedStyle(e).fontWeight));
+    await expect(heading).toHaveCSS('color', 'rgb(244, 244, 246)');
     await expect(note.locator('li')).toHaveText([
       'Too hot → future outfits 0.5° lighter.',
       'Perfect → no change.',
@@ -1428,7 +1433,7 @@ test.describe('settings', () => {
 
     await page.getByRole('button', { name: 'Back to plan a session' }).click();
     await openOutfit(page);
-    await expect(page.locator('#dressing-parts li').last()).toHaveText('From your ratings: no change yet');
+    await expect(page.locator('#dressing-parts li').last()).toHaveText('From your previous feedback: no change yet');
   });
 
   test('rules of thumb: running and cycling tabs show the starting rules', async ({ page }) => {
