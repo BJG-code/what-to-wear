@@ -1547,6 +1547,171 @@ test.describe('settings', () => {
   });
 });
 
+// T2: installing on Android, and the "Add it to your home screen" tip in the browser
+test.describe('add to home screen', () => {
+  test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
+
+  const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  const ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
+  const LAPTOP = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+
+  // Pretends the app was opened from the home screen: iPhone says navigator.standalone, Android says display-mode
+  async function fromHomeScreen(page, how) {
+    await page.addInitScript((how) => {
+      if (how === 'iphone') Object.defineProperty(navigator, 'standalone', { get: () => true });
+      else {
+        const real = window.matchMedia.bind(window);
+        window.matchMedia = (query) => (query === '(display-mode: standalone)'
+          ? { matches: true, media: query, addEventListener() {}, removeEventListener() {} } : real(query));
+      }
+    }, how);
+  }
+
+  const hint = (page) => page.getByRole('complementary', { name: 'Add it to your home screen' });
+
+  test('Android gets a description file with the name, colours, full screen and icons', async ({ page, request }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const href = await page.locator('link[rel="manifest"]').getAttribute('href');
+    const manifest = await (await request.get(href)).json();
+    expect(manifest.name).toBe('What to wear');
+    expect(manifest.short_name).toBe('What to wear');
+    expect(manifest.display).toBe('standalone');
+    expect(manifest.start_url).toBe('./');
+    expect(manifest.scope).toBe('./');
+    expect(manifest.background_color).toBe('#0E0E12');
+    expect(manifest.theme_color).toBe('#0E0E12');
+
+    // A 192 and a 512 icon, plus one Android can crop to a circle, each really that size
+    const sizes = manifest.icons.map((icon) => `${icon.sizes} ${icon.purpose}`);
+    expect(sizes).toEqual(expect.arrayContaining(['192x192 any', '512x512 any', '512x512 maskable']));
+    for (const icon of manifest.icons) {
+      const size = await page.evaluate(async (src) => {
+        const image = new Image();
+        image.src = src;
+        await image.decode();
+        return `${image.naturalWidth}x${image.naturalHeight}`;
+      }, icon.src);
+      expect(size).toBe(icon.sizes);
+    }
+  });
+
+  test('in the browser, the tip shows on Getting to know you and on Plan a session', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    await expect(page.getByText('Getting to know you')).toBeVisible();
+    await expect(hint(page)).toBeVisible();
+    await page.getByLabel('Your name').fill('Bradley');
+    await page.getByRole('button', { name: "Let's go" }).click();
+    await expect(page.getByText('Hello Bradley!')).toBeVisible();
+    await expect(hint(page)).toBeVisible();
+  });
+
+  test('the tip is not on Your outfit or Settings', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    await page.goto('/');
+    await expect(hint(page)).toBeVisible();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(hint(page)).toBeHidden();
+    await page.goBack();
+    await expect(hint(page)).toBeVisible();
+    await fillSession(page);
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#kit-upper')).not.toBeEmpty();
+    await expect(hint(page)).toBeHidden();
+  });
+
+  test('closing the tip keeps it closed, even after reopening, and keeps everything saved', async ({ page }) => {
+    await mockServices(page);
+    await withProfile(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Close the home screen tip' }).click();
+    await expect(hint(page)).toBeHidden();
+    await page.reload();
+    await expect(page.getByText('Hello Bradley!')).toBeVisible();
+    await expect(hint(page)).toBeHidden();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')));
+    expect(saved.installHintClosed).toBe(true);
+    expect(saved.profile).toEqual({ name: 'Bradley', warmth: 'neutral' });
+  });
+
+  test('the close button is at least 44 px to tap', async ({ page }) => {
+    await mockServices(page);
+    await page.goto('/');
+    const box = await page.getByRole('button', { name: 'Close the home screen tip' }).boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('the tip fits a narrow phone without scrolling sideways', async ({ page }) => {
+    await mockServices(page);
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto('/');
+    await expect(hint(page)).toBeVisible();
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(320);
+  });
+
+  for (const how of ['iphone', 'android']) {
+    test(`no tip when opened from the home screen (${how})`, async ({ page }) => {
+      await mockServices(page);
+      await withProfile(page);
+      await fromHomeScreen(page, how);
+      await page.goto('/');
+      await expect(page.getByText('Hello Bradley!')).toBeVisible();
+      await expect(hint(page)).toBeHidden();
+    });
+  }
+
+  test('saved data from before this release still loads, and the tip shows once', async ({ page }) => {
+    await mockServices(page);
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('what-to-wear')) {
+        localStorage.setItem('what-to-wear', JSON.stringify({
+          profile: { name: 'Sam', warmth: 'hot' }, offsets: { running: 1.5, cycling: 0 }, ratings: [],
+        }));
+      }
+    });
+    await page.goto('/');
+    await expect(page.getByText('Hello Sam!')).toBeVisible();
+    await expect(hint(page)).toBeVisible();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('what-to-wear')));
+    expect(saved.offsets.running).toBe(1.5);
+  });
+
+  test.describe('on an iPhone', () => {
+    test.use({ userAgent: IPHONE });
+    test('shows only the Safari steps', async ({ page }) => {
+      await mockServices(page);
+      await page.goto('/');
+      await expect(hint(page)).toContainText('On iPhone, in Safari: tap Share');
+      await expect(hint(page)).toContainText('then Add to Home Screen');
+      await expect(page.locator('#install-android')).toBeHidden();
+    });
+  });
+
+  test.describe('on Android', () => {
+    test.use({ userAgent: ANDROID });
+    test('shows only the Chrome steps', async ({ page }) => {
+      await mockServices(page);
+      await page.goto('/');
+      await expect(hint(page)).toContainText('On Android, in Chrome: tap the ⋮ menu, then Add to Home screen or Install app');
+      await expect(page.locator('#install-iphone')).toBeHidden();
+    });
+  });
+
+  test.describe('on a laptop', () => {
+    test.use({ userAgent: LAPTOP });
+    test('shows both, as it can\'t tell which phone you have', async ({ page }) => {
+      await mockServices(page);
+      await page.goto('/');
+      await expect(page.locator('#install-iphone')).toBeVisible();
+      await expect(page.locator('#install-android')).toBeVisible();
+    });
+  });
+});
+
 test.describe('send my ratings', () => {
   test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
 

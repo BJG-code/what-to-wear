@@ -33,12 +33,14 @@
   // distances: the last distance you entered for each activity, shown again when you switch to it (km)
   // pace: your usual pace, used to estimate the duration (running seconds per km, cycling km/h)
   // rules: your rules of thumb, the dressing temperatures where each item starts (changed in Settings)
+  // installHintClosed: true once you've closed the "Add it to your home screen" tip
   const state = {
     activity: 'running', profile: null, location: null, weather: null, session: null,
     offsets: { running: 0, cycling: 0 }, ratings: [], outfits: [],
     distances: { ...DEFAULT_DISTANCE },
     pace: { ...DEFAULT_PACE },
     rules: window.Clothing.checkRules(null),
+    installHintClosed: false,
   };
   // Where the forecast on Your outfit is for, and the dressing temperature it gave
   let rated = null;
@@ -81,6 +83,7 @@
       }
       if (Array.isArray(saved.ratings)) state.ratings = saved.ratings;
       state.rules = window.Clothing.checkRules(saved.rules);
+      state.installHintClosed = saved.installHintClosed === true;
       if (Array.isArray(saved.outfits)) {
         // Forget outfits that finished too long ago to remember how they felt
         const tooOld = Date.now() - RATE_WITHIN_DAYS * 24 * 60 * 60 * 1000;
@@ -97,6 +100,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         activity: state.activity, profile: state.profile, location,
         offsets: state.offsets, distances: state.distances, pace: state.pace, ratings: state.ratings, outfits: state.outfits, rules: state.rules,
+        installHintClosed: state.installHintClosed,
       }));
     } catch (e) { /* not remembered, but the page still works */ }
   }
@@ -121,7 +125,34 @@
     el('outfit-screen').hidden = name !== 'outfit';
     el('settings-screen').hidden = name !== 'settings';
     if (name === 'plan') showLastSession();
+    showInstallHint(name === 'profile' || name === 'plan');
     window.scrollTo(0, 0);
+  }
+
+  // True when the app was opened from the home screen, rather than in Safari or Chrome
+  function openedFromHomeScreen() {
+    return navigator.standalone === true
+      || ['standalone', 'fullscreen', 'minimal-ui'].some((mode) => window.matchMedia(`(display-mode: ${mode})`).matches);
+  }
+
+  // "Add it to your home screen": only in the browser, on the first two screens, until it's closed.
+  // Shows the steps for your phone, or both when it can't tell (e.g. on a laptop).
+  function showInstallHint(onThisScreen) {
+    const show = onThisScreen && !state.installHintClosed && !openedFromHomeScreen();
+    el('install-hint').hidden = !show;
+    if (!show) return;
+    const agent = navigator.userAgent;
+    // Newer iPads say they're a Mac, but a Mac has no touch screen
+    const iphone = /iPhone|iPad|iPod/.test(agent) || (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1);
+    const android = /Android/.test(agent);
+    el('install-iphone').hidden = android;
+    el('install-android').hidden = iphone;
+  }
+
+  function closeInstallHint() {
+    state.installHintClosed = true;
+    save();
+    showInstallHint(false);
   }
 
   // Each session is known by its activity and start, e.g. "running 2026-10-28T07:00"
@@ -1083,6 +1114,7 @@
       input.checked = input.value === warmth;
     }
     el('profile-screen').addEventListener('submit', saveProfile);
+    el('close-install-hint').addEventListener('click', closeInstallHint);
     initSettings();
     el('name').addEventListener('input', () => {
       if (el('name').value.trim()) {
