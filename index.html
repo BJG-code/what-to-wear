@@ -12,8 +12,8 @@
   <title>What to wear</title>
   <!-- The version of this release. Change it in every pull request that changes the app
        (here and in the ?v= on the files at the bottom), so the phone fetches fresh copies
-       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.6 -->
-  <meta name="app-version" content="2026.11.13.6">
+       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.7 -->
+  <meta name="app-version" content="2026.11.13.7">
   <!-- The app's icon on the iPhone home screen, and in the browser tab -->
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="assets/apple-touch-icon.png">
@@ -998,6 +998,15 @@
       margin-top: 12px;
     }
 
+    /* About this app: a short bold title over each plain paragraph */
+    .about .settings-row.stacked p {
+      margin-bottom: 4px;
+    }
+
+    .about .settings-row.stacked p + p {
+      color: var(--muted);
+    }
+
     .rules li {
       flex-wrap: wrap;
       padding: 0;
@@ -1394,6 +1403,36 @@
         <textarea id="send-text" class="send-text" readonly rows="8" aria-label="Your ratings summary" hidden></textarea>
       </section>
 
+      <!-- About this app: what it is, that it's a trial, and what happens to your data -->
+      <section aria-labelledby="settings-about-label">
+        <h3 class="label" id="settings-about-label">About this app</h3>
+        <div class="settings-card about">
+          <div class="settings-row stacked">
+            <p><strong>What it does</strong></p>
+            <p>Tells you what to wear for a run or bike ride, up to 5 days ahead, and learns from how each outfit felt.</p>
+          </div>
+          <div class="settings-row stacked">
+            <p><strong>It's a trial</strong></p>
+            <p>A small group of friends is trying it out, so it will change as it improves.
+              New versions arrive by themselves when you open the app.</p>
+          </div>
+          <div class="settings-row stacked">
+            <p><strong>Your data stays on this phone</strong></p>
+            <p>There's no account, and nothing you enter is sent anywhere unless you tap Send my ratings.
+              Deleting the home-screen app, or clearing this website's data in your browser settings, wipes it for good.</p>
+          </div>
+          <div class="settings-row stacked">
+            <p><strong>Where the forecast comes from</strong></p>
+            <p>Open-Meteo, a free weather service. It's sent your location (or the town you searched for) to get the forecast, and nothing else.</p>
+          </div>
+          <div class="settings-row stacked">
+            <p><strong>Sending feedback</strong></p>
+            <p>Rate each session once it's finished. At the end of the trial, tap Send my ratings above and send it to whoever shared the app with you.
+              Anything confusing or wrong? Tell them too.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- Which release is on the phone, filled in by app.js from app-version -->
       <p class="app-version" id="app-version"></p>
     </div>
@@ -1404,8 +1443,8 @@
   </main>
 
   <!-- The ?v= must match app-version at the top, so each release loads fresh files -->
-  <script src="weather.js?v=2026.11.13.6"></script>
-  <script src="clothing.js?v=2026.11.13.6"></script>
-  <script src="app.js?v=2026.11.13.6"></script>
+  <script src="weather.js?v=2026.11.13.7"></script>
+  <script src="clothing.js?v=2026.11.13.7"></script>
+  <script src="app.js?v=2026.11.13.7"></script>
 </body>
 </html>
