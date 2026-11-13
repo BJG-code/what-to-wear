@@ -12,8 +12,8 @@
   <title>What to wear</title>
   <!-- The version of this release. Change it in every pull request that changes the app
        (here and in the ?v= on the files at the bottom), so the phone fetches fresh copies
-       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.1 -->
-  <meta name="app-version" content="2026.11.13.1">
+       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.2 -->
+  <meta name="app-version" content="2026.11.13.2">
   <!-- The app's icon on the iPhone home screen, and in the browser tab -->
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="assets/apple-touch-icon.png">
@@ -872,6 +872,12 @@
       color: var(--purple-light);
     }
 
+    /* Stands out as much as "How learning works" below it, so it isn't missed */
+    .learned-label {
+      color: var(--text);
+      font-weight: 600;
+    }
+
     .how-learning strong {
       color: var(--text);
       font-weight: 600;
@@ -1250,7 +1256,7 @@
       </section>
 
       <section aria-labelledby="settings-learned-label">
-        <h3 class="label" id="settings-learned-label">What the app has learned</h3>
+        <h3 class="label learned-label" id="settings-learned-label">What the app has learned</h3>
         <div class="settings-card" id="learned"></div>
         <!-- How a rating changes later outfits, in plain words -->
         <div class="hint how-learning">
@@ -1289,8 +1295,8 @@
   </main>
 
   <!-- The ?v= must match app-version at the top, so each release loads fresh files -->
-  <script src="weather.js?v=2026.11.13.1"></script>
-  <script src="clothing.js?v=2026.11.13.1"></script>
-  <script src="app.js?v=2026.11.13.1"></script>
+  <script src="weather.js?v=2026.11.13.2"></script>
+  <script src="clothing.js?v=2026.11.13.2"></script>
+  <script src="app.js?v=2026.11.13.2"></script>
 </body>
 </html>
