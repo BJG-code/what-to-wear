@@ -12,11 +12,13 @@
   <title>What to wear</title>
   <!-- The version of this release. Change it in every pull request that changes the app
        (here and in the ?v= on the files at the bottom), so the phone fetches fresh copies
-       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.5 -->
-  <meta name="app-version" content="2026.11.13.5">
+       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.6 -->
+  <meta name="app-version" content="2026.11.13.6">
   <!-- The app's icon on the iPhone home screen, and in the browser tab -->
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="assets/apple-touch-icon.png">
+  <!-- Tells Android how to install the app: its name, icons, colours, and to open full screen -->
+  <link rel="manifest" href="manifest.webmanifest">
 
   <!-- Load Carlito from Google Fonts: the free fallback for Calibri, same shape -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -785,6 +787,51 @@
       outline-offset: 2px;
     }
 
+    /* "Add it to your home screen", shown only in the browser until it's closed */
+    .install-hint {
+      position: relative;
+      background: var(--selected-tint);
+      border-radius: 16px;
+      padding: 14px 52px 16px 16px;
+    }
+
+    .install-hint h2 {
+      font-size: 1.125rem;
+      color: var(--purple-light);
+      margin-bottom: 4px;
+    }
+
+    .install-hint p {
+      color: var(--muted);
+    }
+
+    .install-hint ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+
+    .install-hint li + li {
+      margin-top: 4px;
+    }
+
+    .install-hint strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .install-hint .share-icon {
+      vertical-align: -3px;
+      color: var(--purple-light);
+    }
+
+    .install-hint .icon-button {
+      position: absolute;
+      top: 4px;
+      right: 12px;
+      width: 44px;
+      height: 44px;
+    }
+
     /* Settings: cards of rows, label on the left and value on the right */
     #settings-heading {
       outline: none;
@@ -1029,6 +1076,21 @@
         <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </header>
+
+    <!-- How to add the app to the home screen: only in the browser, until it's closed (app.js) -->
+    <aside id="install-hint" class="install-hint" aria-labelledby="install-hint-heading" hidden>
+      <h2 id="install-hint-heading">Add it to your home screen</h2>
+      <p>It then opens full screen, like an app.</p>
+      <ul>
+        <li id="install-iphone">On iPhone, in Safari: tap <strong>Share</strong>
+          <svg class="share-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M8 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2"/></svg>,
+          then <strong>Add to Home Screen</strong>. Best done first: the home-screen app keeps its own copy of your details.</li>
+        <li id="install-android">On Android, in Chrome: tap the <strong>⋮</strong> menu, then <strong>Add to Home screen</strong> or <strong>Install app</strong>.</li>
+      </ul>
+      <button type="button" class="icon-button" id="close-install-hint" aria-label="Close the home screen tip">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </aside>
 
     <!-- Screen 0: Getting to know you (first launch only) -->
     <form id="profile-screen" class="screen" novalidate hidden>
@@ -1342,8 +1404,8 @@
   </main>
 
   <!-- The ?v= must match app-version at the top, so each release loads fresh files -->
-  <script src="weather.js?v=2026.11.13.5"></script>
-  <script src="clothing.js?v=2026.11.13.5"></script>
-  <script src="app.js?v=2026.11.13.5"></script>
+  <script src="weather.js?v=2026.11.13.6"></script>
+  <script src="clothing.js?v=2026.11.13.6"></script>
+  <script src="app.js?v=2026.11.13.6"></script>
 </body>
 </html>

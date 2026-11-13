@@ -24,6 +24,8 @@ After v1.0, a small group of friends (up to 10, most likely about 5) trial it th
 - `clothing.js`: the outfit rules, kept separate so they can be tested on their own
 - `tests/`: automated checks (Playwright)
 - `assets/logo.png`: the logo
+- `manifest.webmanifest`: tells Android how to install the app (name, icons, colours, full screen)
+- `assets/icon-*.png`: the Android home-screen icons
 - `docs/`: spec, mockups, gap list
 
 Plain HTML, CSS and JavaScript. No frameworks and no build step.
