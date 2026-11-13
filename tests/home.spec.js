@@ -1404,11 +1404,11 @@ test.describe('settings', () => {
     await openSettings(page);
     const note = page.locator('#settings-screen .how-learning');
     await expect(note.locator('strong')).toHaveText('How learning works');
-    // The heading above the learned rows is as easy to see as the note
+    // The heading above the learned rows is as bold as the note, and purple
     const heading = page.locator('#settings-learned-label');
     await expect(heading).toHaveText('What the app has learned');
     await expect(heading).toHaveCSS('font-weight', await note.locator('strong').evaluate((e) => getComputedStyle(e).fontWeight));
-    await expect(heading).toHaveCSS('color', 'rgb(244, 244, 246)');
+    await expect(heading).toHaveCSS('color', 'rgb(196, 167, 255)');
     await expect(note.locator('li')).toHaveText([
       'Too hot → future outfits 0.5° lighter.',
       'Perfect → no change.',
