@@ -19,6 +19,7 @@
 - **B2 (agreed 6 Nov 2026, a follow-up to B1):** when you open the app, or come back to it, it checks whether a newer release is live and, if so, loads it straight away. It never does this while you're looking at Your outfit or Settings, and with no signal it carries on with the version already on the phone.
 - **C2 (agreed 6 Nov 2026):** duration is estimated from your own usual pace instead of a fixed one. "Your usual pace" (running pace in min/km, default 6:00; cycling speed in km/h, default 25) is asked on Getting to know you, pre-filled with the defaults, and can be changed in Settings. Plan a session pre-fills the duration from the distance and that pace and says how, e.g. "Estimated from your usual pace of 5:50/km. Change it if you like." The duration stays editable, and a number you type yourself is kept.
 - **Trial (agreed 7 Nov 2026):** after v1.0, the app is trialled by a small group of friends (up to 10, most likely about 5) using the shareable link. Three small changes come first: a way to send your ratings back (T1), installing on Android and a first-visit "add to home screen" hint (T2), and an "About this app" note in Settings saying what happens to your data (T3). See "Trial with a small group" below. No accounts, no app store and still £0.
+- **C3 (agreed 13 Nov 2026):** clearer words about how ratings change later outfits, because people didn't understand it. Only the words change, not how learning works. After Too hot or Too cold, the thank-you says what will happen and why the kit may not change yet, e.g. "Thanks! Next time we'll dress you 0.5° warmer for runs. Small nudges add up: your kit changes once they cross one of your rules of thumb." (no specific rule is named, as rules can be edited). Perfect and reaching the limit keep their own messages in the same plain style. The breakdown says "From your ratings: 0.5° warmer" / "0.5° lighter", or "From your ratings: no change yet", instead of "Learned −0.5°". Settings adds a short "How learning works" note under what the app has learned.
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -181,7 +182,12 @@ After each session you rate the outfit, and each rating nudges a learned offset 
 
 - Separate offsets for running and cycling, since the two feel different.
 - The offset is capped at ±5 °C, so one bad week can't wreck the rules.
-- Settings shows the current offset in plain words ("You run about 1.5 °C warmer than average") with a reset button, and the line "Each rating moves this by 0.5 °C, up to ±5 °C."
+- Settings shows the current offset in plain words ("You run about 1.5 °C warmer than average") with a reset button, and a short "How learning works" note: Too hot → future outfits 0.5° lighter. Perfect → no change. Too cold → future outfits 0.5° warmer. Running and cycling learn separately, up to 5° either way, and you can reset any time.
+- After rating, the thank-you says what happens next, in plain words:
+  - Too hot or Too cold: "Thanks! Next time we'll dress you 0.5° lighter (or warmer) for runs (or rides). Small nudges add up: your kit changes once they cross one of your rules of thumb." It never names a specific rule, because rules can be edited.
+  - Perfect: "Thanks! Next time we'll dress you the same way for runs."
+  - Already at the limit: "Thanks! That's saved, but we already dress you 5° lighter for runs, the most we go. You can reset it in Settings."
+- The dressing temperature breakdown shows the offset in words, not as a plus or minus: "From your ratings: 0.5° lighter", "From your ratings: 1.5° warmer", or "From your ratings: no change yet".
 - Every rating is saved with its forecast, effort, distance and duration, ready for smarter learning in v1.1.
 - Feedback is asked on the result screen once the session has finished (start time + duration).
 
