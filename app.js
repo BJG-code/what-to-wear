@@ -1,5 +1,5 @@
 // Runs the page: finds your location, fetches the forecast and shows what to wear.
-// There are four screens: "Getting to know you" (first launch only), "Plan a session", "Your outfit" and "Settings".
+// There are five screens: "Getting to know you" (first launch only), "Plan a session", "Your outfit", "Settings" and "History".
 (function () {
   const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
   const PLACES_URL = 'https://geocoding-api.open-meteo.com/v1/search';
@@ -119,11 +119,12 @@
   // Show one screen and hide the others, starting at the top of the page
   function showScreen(name) {
     el('profile-screen').hidden = name !== 'profile';
-    el('logo').hidden = name === 'outfit' || name === 'settings';
+    el('logo').hidden = name === 'outfit' || name === 'settings' || name === 'history';
     el('open-settings').hidden = name !== 'plan';
     el('plan-screen').hidden = name !== 'plan';
     el('outfit-screen').hidden = name !== 'outfit';
     el('settings-screen').hidden = name !== 'settings';
+    el('history-screen').hidden = name !== 'history';
     if (name === 'plan') showLastSession();
     showInstallHint(name === 'profile' || name === 'plan');
     window.scrollTo(0, 0);
@@ -946,9 +947,9 @@
 
   // Asks the website which version is live. If it's newer than the one running, open the
   // new one straight away, so a release shows up the next time you open the app.
-  // Only on Getting to know you or Plan a session, so it never takes away an outfit you're reading.
+  // Only on Getting to know you or Plan a session, so it never takes away an outfit or history you're reading.
   async function checkForUpdate() {
-    if (!el('outfit-screen').hidden || !el('settings-screen').hidden) return;
+    if (!el('outfit-screen').hidden || !el('settings-screen').hidden || !el('history-screen').hidden) return;
     let live;
     try {
       // A new address each time, so neither the phone nor the website hands back an old copy
@@ -966,9 +967,56 @@
     } catch (error) {
       return; // Can't remember the try, so don't risk reloading over and over
     }
-    if (!el('outfit-screen').hidden || !el('settings-screen').hidden) return;
+    if (!el('outfit-screen').hidden || !el('settings-screen').hidden || !el('history-screen').hidden) return;
     // The ?v= makes it a new address, so the phone fetches the new page instead of its old copy
     location.replace(`${location.pathname}?v=${encodeURIComponent(live)}`);
+  }
+
+  // The History link on Plan a session, as a step in the browser history so swiping back works
+  function openHistory() {
+    history.pushState({ screen: 'history' }, '');
+    showHistory();
+    el('history-heading').focus();
+  }
+
+  // History: every session you've rated, newest first, written like a diary, e.g.
+  // "Sat 14 Nov · 07:00", "You ran 10 km easy", "You wore: Long sleeve, Shorts, Headband", "It felt: Perfect".
+  // Only reads what's saved; nothing is changed.
+  function showHistory() {
+    const entries = state.ratings
+      .filter((r) => r && typeof r.start === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(r.start))
+      .map((r) => ({ r, start: restoreSession({ startText: r.start }).start }))
+      .sort((a, b) => b.start - a.start);
+    el('history-empty').hidden = entries.length > 0;
+    el('history-list').replaceChildren(...entries.map(({ r, start }) => {
+      const li = document.createElement('li');
+      const line = (text, label) => {
+        const p = document.createElement('p');
+        if (label) {
+          const span = document.createElement('span');
+          span.className = 'history-label';
+          span.textContent = `${label}: `;
+          p.append(span);
+        }
+        p.append(document.createTextNode(text));
+        return p;
+      };
+      // The year only when it isn't this year
+      const options = { weekday: 'short', day: 'numeric', month: 'short' };
+      if (start.getFullYear() !== new Date().getFullYear()) options.year = 'numeric';
+      const day = line(`${start.toLocaleDateString('en-GB', options).replace(',', '')} · ${r.start.slice(11, 16)}`);
+      day.className = 'history-day';
+      const verb = r.activity === 'cycling' ? 'rode' : 'ran';
+      const effort = ['easy', 'medium', 'hard'].includes(r.effort) ? ` ${r.effort}` : '';
+      li.append(
+        day,
+        line(`You ${verb} ${r.distance} km${effort}`),
+        line(ratedOutfit(r), 'You wore'),
+        line(RATINGS[r.rating] || '–', 'It felt'),
+      );
+      return li;
+    }));
+    showScreen('history');
   }
 
   // Send my ratings: a plain-text summary for the trial, with no name in it.
@@ -1069,6 +1117,8 @@
     el('app-version').textContent = `Version ${APP_VERSION}`;
     el('open-settings').addEventListener('click', openSettings);
     el('send-ratings').addEventListener('click', sendRatings);
+    el('open-history').addEventListener('click', openHistory);
+    el('history-back').addEventListener('click', () => history.back());
     el('settings-back').addEventListener('click', () => history.back());
     el('settings-name').addEventListener('input', nameTyped);
     el('settings-name').addEventListener('change', nameDone);
@@ -1175,6 +1225,7 @@
     window.addEventListener('popstate', (event) => {
       const screen = event.state && event.state.screen;
       if (screen === 'settings') showSettings();
+      else if (screen === 'history') showHistory();
       else showScreen(screen === 'outfit' ? 'outfit' : 'plan');
     });
     // Open on Getting to know you the first time, then always on Plan a session, even after a reload
