@@ -11,6 +11,7 @@ The full detail is in [docs/spec.md](docs/spec.md).
 - Outfit in three cards (Upper body, Lower body, Accessories), with notes when they apply, including weather changing during the session
 - Too hot / Perfect / Too cold after each session, tuning future outfits separately for running and cycling
 - Settings: profile, learned offsets with Reset, and rules of thumb you can adjust
+- History: every rated session, newest first, written like a diary
 - A home-screen web app on the iPhone, hosted free on GitHub Pages; everything personal stays on the phone
 
 **Done when:** installed on the iPhone by Sun 22 Nov 2026, used before real runs and rides, and rated "Perfect" on most sessions after two weeks of feedback.

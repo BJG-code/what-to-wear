@@ -1937,6 +1937,156 @@ test.describe('about this app', () => {
   });
 });
 
+// C4: History, a diary of every session you've rated, newest first
+test.describe('history', () => {
+  test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
+
+  const forecast = {
+    start: { time: '07:00', temperature: 10, feelsLike: 8, windSpeed: 12, gusts: 25, rainChance: 10,
+      cloudCover: 80, isDay: true, humidity: 82 },
+    hours: [], worstGusts: 25, worstRainChance: 10,
+  };
+
+  // Saved by earlier releases: out of order, runs and rides, one from last year, one with no effort or rules of thumb
+  const oldRatings = [
+    { id: 'a', rating: 'perfect', activity: 'running', start: '2026-11-14T07:00', distance: 10, duration: 60,
+      effort: 'easy', warmth: 'neutral', dressingTemp: 10, forecast, learnedBefore: 0, learnedAfter: 0,
+      rules: { vest: 16, tshirt: 11, longSleeve: 6, shorts: 8, headband: 8, hat: 4, gloves: 7 } },
+    { id: 'b', rating: 'cold', activity: 'cycling', start: '2026-11-17T18:30', distance: 30, duration: 72,
+      effort: 'medium', warmth: 'neutral', dressingTemp: 7, forecast: { ...forecast, worstRainChance: 60 },
+      learnedBefore: 0, learnedAfter: -0.5 },
+    { id: 'c', rating: 'hot', activity: 'running', start: '2025-12-30T08:15', distance: 5, duration: 30,
+      warmth: 'neutral', dressingTemp: 17, forecast, learnedBefore: 0, learnedAfter: 0.5 },
+  ];
+
+  async function withSaved(page, saved) {
+    await page.addInitScript((saved) => {
+      if (!localStorage.getItem('what-to-wear')) {
+        localStorage.setItem('what-to-wear', JSON.stringify({ profile: { name: 'Bradley', warmth: 'neutral' }, ...saved }));
+      }
+    }, saved);
+  }
+
+  // Each diary entry's lines, e.g. ['Sat 14 Nov · 07:00', 'You ran 10 km easy', ...]
+  async function entries(page) {
+    return page.locator('#history-list li').evaluateAll((items) => items.map((li) =>
+      [...li.children].map((p) => p.textContent)));
+  }
+
+  const historyLink = (page) => page.getByRole('button', { name: 'History' });
+
+  test('the History link is on Plan a session, big enough to tap, and back returns', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-11-21T12:00:00Z') });
+    await withProfile(page);
+    await mockServices(page);
+    await page.goto('/');
+    const link = historyLink(page);
+    const box = await link.boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await link.click();
+    await expect(page.locator('#history-screen')).toBeVisible();
+    await expect(page.locator('#plan-screen')).toBeHidden();
+    await expect(page.locator('#logo')).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'History' })).toBeFocused();
+    // Nothing rated yet
+    await expect(page.locator('#history-empty')).toHaveText(
+      'Nothing here yet. Once a session has finished, rate how the outfit felt and it will appear here.');
+    await expect(page.locator('#history-list li')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Back to plan a session' }).click();
+    await expect(page.locator('#plan-screen')).toBeVisible();
+    await expect(page.locator('#history-screen')).toBeHidden();
+
+    // The phone's back gesture does the same
+    await link.click();
+    await page.goBack();
+    await expect(page.locator('#plan-screen')).toBeVisible();
+
+    // Not on Your outfit or Settings
+    await openOutfit(page);
+    await expect(link).toBeHidden();
+    await page.goBack();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(link).toBeHidden();
+  });
+
+  test('a session you rate shows up, written like a diary', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-11-14T09:00:00Z') });
+    await withProfile(page);
+    await mockServices(page);
+    await page.goto('/');
+    await openOutfit(page, { time: '07:00', distance: '10' });
+    await page.getByRole('button', { name: 'Perfect' }).click();
+    await page.goBack();
+    await historyLink(page).click();
+    await expect(page.locator('#history-empty')).toBeHidden();
+    // Feels like 8.1 + 2 for 10 km = 10 → Long sleeve, Shorts
+    expect(await entries(page)).toEqual([
+      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
+    ]);
+  });
+
+  test('past runs and rides are listed newest first, and nothing saved changes', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-11-21T12:00:00Z') });
+    await withSaved(page, { offsets: { running: 0.5, cycling: -0.5 }, ratings: oldRatings });
+    await mockServices(page);
+    await page.goto('/');
+    const before = await page.evaluate(() => localStorage.getItem('what-to-wear'));
+    await historyLink(page).click();
+    expect(await entries(page)).toEqual([
+      // Rain 60% during the ride adds the waterproof
+      ['Tue 17 Nov · 18:30', 'You rode 30 km medium',
+        'You wore: Long sleeve, Gilet, Waterproof jacket, Tights, Buff, Gloves', 'It felt: Too cold'],
+      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
+      // From last year, so the year is shown; saved without an effort
+      ['Tue 30 Dec 2025 · 08:15', 'You ran 5 km', 'You wore: Vest, Shorts', 'It felt: Too hot'],
+    ]);
+    const after = await page.evaluate(() => localStorage.getItem('what-to-wear'));
+    expect(after).toBe(before);
+    expect(JSON.parse(after).ratings).toEqual(oldRatings);
+  });
+
+  test('a saved rating it can\'t read is left out, and the rest still show', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-11-21T12:00:00Z') });
+    await withSaved(page, { ratings: [null, { id: 'x', rating: 'perfect' }, oldRatings[0]] });
+    await mockServices(page);
+    await page.goto('/');
+    await historyLink(page).click();
+    expect(await entries(page)).toEqual([
+      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
+    ]);
+  });
+
+  test('a newer release never takes away the history you are reading', async ({ page }) => {
+    await withSaved(page, { ratings: oldRatings });
+    await mockServices(page);
+    await page.goto('/');
+    await historyLink(page).click();
+    const checks = [];
+    await page.route('**/index.html?check=*', (route) => {
+      checks.push(route.request().url());
+      return route.abort();
+    });
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(500);
+    expect(checks.length).toBe(0);
+    await expect(page.locator('#history-screen')).toBeVisible();
+  });
+
+  test('fits a narrow phone without scrolling sideways', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await withSaved(page, { ratings: oldRatings });
+    await mockServices(page);
+    await page.goto('/');
+    // The title and the link fit side by side on Plan a session
+    let scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(320);
+    await historyLink(page).click();
+    scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(320);
+  });
+});
+
 test.describe('releases', () => {
   test.use({ geolocation: LONDON, permissions: ['geolocation'], timezoneId: 'Europe/London' });
 

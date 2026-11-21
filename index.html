@@ -12,8 +12,8 @@
   <title>What to wear</title>
   <!-- The version of this release. Change it in every pull request that changes the app
        (here and in the ?v= on the files at the bottom), so the phone fetches fresh copies
-       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.13.7 -->
-  <meta name="app-version" content="2026.11.13.7">
+       instead of reusing old ones. Format: year.month.day.number, e.g. 2026.11.21.1 -->
+  <meta name="app-version" content="2026.11.21.1">
   <!-- The app's icon on the iPhone home screen, and in the browser tab -->
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="assets/apple-touch-icon.png">
@@ -832,6 +832,68 @@
       height: 44px;
     }
 
+    /* "Plan a session" with the History link beside it */
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .text-button {
+      min-height: 44px;
+      margin-right: -8px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      color: var(--purple-light);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .text-button:hover {
+      background: var(--selected-tint);
+    }
+
+    .text-button:focus-visible {
+      outline: 2px solid var(--purple-light);
+      outline-offset: 2px;
+    }
+
+    /* History: one card per session, written like a diary */
+    #history-heading {
+      outline: none;
+    }
+
+    .history {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    .history li {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: grid;
+      gap: 4px;
+      overflow-wrap: anywhere;
+    }
+
+    .history .history-day {
+      font-weight: 700;
+      color: var(--purple-light);
+    }
+
+    .history .history-label {
+      color: var(--muted);
+    }
+
     /* Settings: cards of rows, label on the left and value on the right */
     #settings-heading {
       outline: none;
@@ -1165,7 +1227,14 @@
     <div id="plan-screen" class="screen" hidden>
       <div>
         <p id="greeting" class="greeting"></p>
-        <h2 class="screen-title">Plan a session</h2>
+        <!-- The title, with the History link beside it -->
+        <div class="title-row">
+          <h2 class="screen-title">Plan a session</h2>
+          <button type="button" class="text-button" id="open-history">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            History
+          </button>
+        </div>
       </div>
 
       <!-- Your last session, once it has finished, if you haven't rated it yet -->
@@ -1437,14 +1506,27 @@
       <p class="app-version" id="app-version"></p>
     </div>
 
+    <!-- Screen 4: History, from the link on Plan a session. A diary of every session you've rated, newest first -->
+    <div id="history-screen" class="screen" hidden>
+      <div class="top-bar">
+        <button type="button" class="back-button" id="history-back" aria-label="Back to plan a session">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 class="screen-title" id="history-heading" tabindex="-1">History</h2>
+      </div>
+      <p class="hint" id="history-empty" hidden>Nothing here yet. Once a session has finished, rate how the outfit felt and it will appear here.</p>
+      <!-- Filled in by app.js -->
+      <ol class="history" id="history-list" aria-labelledby="history-heading"></ol>
+    </div>
+
     <footer>
       Weather data from <a href="https://open-meteo.com/">Open-Meteo</a>
     </footer>
   </main>
 
   <!-- The ?v= must match app-version at the top, so each release loads fresh files -->
-  <script src="weather.js?v=2026.11.13.7"></script>
-  <script src="clothing.js?v=2026.11.13.7"></script>
-  <script src="app.js?v=2026.11.13.7"></script>
+  <script src="weather.js?v=2026.11.21.1"></script>
+  <script src="clothing.js?v=2026.11.21.1"></script>
+  <script src="app.js?v=2026.11.21.1"></script>
 </body>
 </html>
