@@ -2022,7 +2022,7 @@ test.describe('history', () => {
     await expect(page.locator('#history-empty')).toBeHidden();
     // Feels like 8.1 + 2 for 10 km = 10 → Long sleeve, Shorts
     expect(await entries(page)).toEqual([
-      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
+      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'Weather: 10°C, felt like 8°C · Cloudy · wind 12 km/h, gusts 25 · rain 10%', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
     ]);
   });
 
@@ -2035,15 +2035,32 @@ test.describe('history', () => {
     await historyLink(page).click();
     expect(await entries(page)).toEqual([
       // Rain 60% during the ride adds the waterproof
-      ['Tue 17 Nov · 18:30', 'You rode 30 km medium',
+      ['Tue 17 Nov · 18:30', 'You rode 30 km medium', 'Weather: 10°C, felt like 8°C · Cloudy · wind 12 km/h, gusts 25 · rain 60%',
         'You wore: Long sleeve, Gilet, Waterproof jacket, Tights, Buff, Gloves', 'It felt: Too cold'],
-      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
+      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'Weather: 10°C, felt like 8°C · Cloudy · wind 12 km/h, gusts 25 · rain 10%', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
       // From last year, so the year is shown; saved without an effort
-      ['Tue 30 Dec 2025 · 08:15', 'You ran 5 km', 'You wore: Vest, Shorts', 'It felt: Too hot'],
+      ['Tue 30 Dec 2025 · 08:15', 'You ran 5 km', 'Weather: 10°C, felt like 8°C · Cloudy · wind 12 km/h, gusts 25 · rain 10%', 'You wore: Vest, Shorts', 'It felt: Too hot'],
     ]);
     const after = await page.evaluate(() => localStorage.getItem('what-to-wear'));
     expect(after).toBe(before);
     expect(JSON.parse(after).ratings).toEqual(oldRatings);
+  });
+
+  test('the weather leaves out anything an older save is missing, and has no line with no forecast', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-11-21T12:00:00Z') });
+    const base = { rating: 'perfect', activity: 'running', distance: 5, duration: 30, effort: 'easy', dressingTemp: 10 };
+    await withSaved(page, { ratings: [
+      { ...base, id: 'p', start: '2026-11-20T07:00',
+        forecast: { start: { feelsLike: -2.4, cloudCover: 10, isDay: false }, hours: [] } },
+      { ...base, id: 'q', start: '2026-11-19T07:00' },
+    ] });
+    await mockServices(page);
+    await page.goto('/');
+    await historyLink(page).click();
+    const [partial, none] = await entries(page);
+    // Clear at night, with no temperature, wind or rain saved
+    expect(partial[2]).toBe('Weather: Felt like −2°C · Clear');
+    expect(none).toEqual(['Thu 19 Nov · 07:00', 'You ran 5 km easy', 'You wore: –', 'It felt: Perfect']);
   });
 
   test('a saved rating it can\'t read is left out, and the rest still show', async ({ page }) => {
@@ -2053,7 +2070,7 @@ test.describe('history', () => {
     await page.goto('/');
     await historyLink(page).click();
     expect(await entries(page)).toEqual([
-      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
+      ['Sat 14 Nov · 07:00', 'You ran 10 km easy', 'Weather: 10°C, felt like 8°C · Cloudy · wind 12 km/h, gusts 25 · rain 10%', 'You wore: Long sleeve, Shorts', 'It felt: Perfect'],
     ]);
   });
 
