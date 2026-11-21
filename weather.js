@@ -5,6 +5,8 @@
   const HOURLY_FIELDS = [
     'temperature_2m', 'apparent_temperature', 'wind_speed_10m', 'wind_gusts_10m',
     'precipitation_probability', 'cloud_cover', 'is_day', 'relative_humidity_2m',
+    // C6: minutes of real sunshine (in seconds, for the hour before) and the UV index
+    'sunshine_duration', 'uv_index',
   ];
 
   // And one value per day: the exact sunrise and sunset, so daylight is known to the minute (C5)
@@ -12,6 +14,9 @@
 
   // Cloud cover (%) at or below which the sky counts as sunny (or clear at night)
   const SUNNY_CLOUD = 30;
+
+  // Sunglasses: an hour of the session with at least this much sunshine (seconds; 30 minutes) (C6)
+  const SUNNY_SECONDS = 30 * 60;
 
   const HOUR = 60 * 60 * 1000;
 
@@ -92,8 +97,20 @@
           ? lightAt(Math.min(Math.max(times[i], startTime), endTime))
           : Boolean(h.is_day && h.is_day[i] === 1),
         humidity: value(h.relative_humidity_2m && h.relative_humidity_2m[i]),
+        uvIndex: value(h.uv_index && h.uv_index[i]),
       });
     }
+
+    // Sunshine for each hour of the session. Open-Meteo gives each hour's sunshine for the hour
+    // before it, so 08:00 says how sunny 07:00 to 08:00 was: every hour from just after the start
+    // up to an hour after the finish counts. Null if the forecast has none.
+    const sunshine = [];
+    if (Array.isArray(h.sunshine_duration)) {
+      times.forEach((time, i) => {
+        if (time > startTime && time < endTime + HOUR) sunshine.push(value(h.sunshine_duration[i]));
+      });
+    }
+    const knownSunshine = sunshine.filter((n) => n !== null);
 
     // The exact time the sun rises or sets during the session, e.g. "07:17", or null
     const during = (key) => {
@@ -110,8 +127,14 @@
       hours,
       worstRainChance: worst(hours.map((hour) => hour.rainChance)),
       worstGusts: worst(hours.map((hour) => hour.gusts)),
-      // Sunglasses go by any hour of the session in sunshine, not just the start (C5)
-      sunny: hours.some((hour) => hour.isDay && hour.cloudCover !== null && hour.cloudCover <= SUNNY_CLOUD),
+      // Sunglasses go by any hour of the session in sunshine, not just the start (C5): at least
+      // 30 minutes of real sunshine in an hour (C6). Without sunshine in the forecast, any hour
+      // in daylight with 30% cloud or less, as before.
+      sunny: knownSunshine.length
+        ? knownSunshine.some((n) => n >= SUNNY_SECONDS)
+        : hours.some((hour) => hour.isDay && hour.cloudCover !== null && hour.cloudCover <= SUNNY_CLOUD),
+      // Sun cream goes by the highest UV index during the session (C6); null if the forecast has none
+      worstUv: worst(hours.map((hour) => hour.uvIndex)),
       sunrise: during('sunrise'),
       sunset: during('sunset'),
     };
