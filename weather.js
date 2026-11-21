@@ -7,6 +7,9 @@
     'precipitation_probability', 'cloud_cover', 'is_day', 'relative_humidity_2m',
   ];
 
+  // And one value per day: the exact sunrise and sunset, so daylight is known to the minute (C5)
+  const DAILY_FIELDS = ['sunrise', 'sunset'];
+
   // Cloud cover (%) at or below which the sky counts as sunny (or clear at night)
   const SUNNY_CLOUD = 30;
 
@@ -35,19 +38,40 @@
     return known.length ? Math.max(...known) : null;
   }
 
+  // "07:17" from "2026-11-14T07:17"
+  const clock = (time) => new Date(time).toISOString().slice(11, 16);
+
+  // Each day's sunrise and sunset from the forecast, as [{ sunrise, sunset }] in clock time.
+  // Empty if the forecast hasn't got them (then the hourly daylight is used instead).
+  function daylightSpans(forecast) {
+    const d = forecast && forecast.daily;
+    if (!d || !Array.isArray(d.sunrise) || !Array.isArray(d.sunset)) return [];
+    const spans = [];
+    d.sunrise.forEach((rise, i) => {
+      const set = d.sunset[i];
+      if (typeof rise === 'string' && typeof set === 'string') spans.push({ sunrise: clockTime(rise), sunset: clockTime(set) });
+    });
+    return spans;
+  }
+
   // forecast: Open-Meteo's answer. start: "2026-10-28T07:00". duration: minutes.
-  // Returns the hour nearest the start, every hour from start to finish, and the worst rain and gusts
-  // in that time; or null if the forecast doesn't cover the start.
+  // Returns the hour nearest the start, every hour from start to finish, the worst rain and gusts
+  // in that time, whether any of it is sunny, and sunrise or sunset if one happens during the session;
+  // or null if the forecast doesn't cover the start.
   function forSession(forecast, start, duration) {
     const h = forecast && forecast.hourly;
     if (!h || !Array.isArray(h.time)) return null;
     const times = h.time.map(clockTime);
     const startTime = clockTime(start);
+    const endTime = startTime + duration * 60 * 1000;
     const nearestHour = (time) => Math.round(time / HOUR) * HOUR;
+    const spans = daylightSpans(forecast);
+    // Daylight to the minute, from sunrise up to sunset
+    const lightAt = (time) => spans.some((s) => time >= s.sunrise && time < s.sunset);
 
     const first = times.indexOf(nearestHour(startTime));
     if (first < 0) return null;
-    let last = times.indexOf(nearestHour(startTime + duration * 60 * 1000));
+    let last = times.indexOf(nearestHour(endTime));
     // A session running past the end of the forecast uses the hours there are
     if (last < 0) last = times.length - 1;
 
@@ -61,10 +85,21 @@
         gusts: value(h.wind_gusts_10m && h.wind_gusts_10m[i]),
         rainChance: value(h.precipitation_probability && h.precipitation_probability[i]),
         cloudCover: value(h.cloud_cover && h.cloud_cover[i]),
-        isDay: h.is_day && h.is_day[i] === 1,
+        // With sunrise and sunset, daylight is worked out for the moment this hour stands for,
+        // kept within the session: so a 07:15 start is dark if the sun rises at 07:17.
+        // Without them, Open-Meteo's daylight for the whole hour.
+        isDay: spans.length
+          ? lightAt(Math.min(Math.max(times[i], startTime), endTime))
+          : Boolean(h.is_day && h.is_day[i] === 1),
         humidity: value(h.relative_humidity_2m && h.relative_humidity_2m[i]),
       });
     }
+
+    // The exact time the sun rises or sets during the session, e.g. "07:17", or null
+    const during = (key) => {
+      const span = spans.find((s) => s[key] > startTime && s[key] <= endTime);
+      return span ? clock(span[key]) : null;
+    };
 
     // Without the temperature at the start there's nothing to dress for
     const startHour = hours[0];
@@ -75,6 +110,10 @@
       hours,
       worstRainChance: worst(hours.map((hour) => hour.rainChance)),
       worstGusts: worst(hours.map((hour) => hour.gusts)),
+      // Sunglasses go by any hour of the session in sunshine, not just the start (C5)
+      sunny: hours.some((hour) => hour.isDay && hour.cloudCover !== null && hour.cloudCover <= SUNNY_CLOUD),
+      sunrise: during('sunrise'),
+      sunset: during('sunset'),
     };
   }
 
@@ -100,9 +139,10 @@
   // session: from forSession. startTime: your start time as text, e.g. "07:00".
   // Returns a list of { kind, text }, where kind is "rain", "wind", "dark" or "temperature".
   // Something true at the start is said plainly ("Rain likely."); something that starts later in
-  // the session says when ("Rain likely from 08:00.").
+  // the session says when ("Rain likely from 08:00."). Lights give the exact sunrise or sunset when
+  // it's during the session ("Dark at 07:15, light from 07:17: take lights.").
   function notes(session, startTime) {
-    const { start, hours } = session;
+    const { start, hours, sunrise, sunset } = session;
     const later = hours.slice(1);
     const list = [];
 
@@ -121,8 +161,14 @@
     else if (firstLater(gusty)) list.push({ kind: 'wind', text: `Gusty from ${firstLater(gusty)}.` });
 
     const dark = (hour) => !hour.isDay;
-    if (dark(start)) list.push({ kind: 'dark', text: `Dark at ${startTime}: take lights.` });
-    else if (firstLater(dark)) list.push({ kind: 'dark', text: `Dark from ${firstLater(dark)}: take lights.` });
+    if (dark(start)) {
+      const light = sunrise ? `, light from ${sunrise}` : '';
+      list.push({ kind: 'dark', text: `Dark at ${startTime}${light}: take lights.` });
+    } else if (sunset) {
+      list.push({ kind: 'dark', text: `Dark from ${sunset} (sunset): take lights.` });
+    } else if (firstLater(dark)) {
+      list.push({ kind: 'dark', text: `Dark from ${firstLater(dark)}: take lights.` });
+    }
 
     // Feels like at the end compared with the start
     const end = hours[hours.length - 1];
@@ -136,7 +182,7 @@
     return list;
   }
 
-  const api = { HOURLY_FIELDS, SUNNY_CLOUD, forSession, readings, notes };
+  const api = { HOURLY_FIELDS, DAILY_FIELDS, SUNNY_CLOUD, forSession, readings, notes };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else {

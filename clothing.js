@@ -149,19 +149,23 @@
   }
 
   // Sun cream and sunglasses, the same for both activities. Uses the actual temperature, not the dressing temp.
-  function sunItems({ temperature, cloudCover, isDay }) {
+  // Sun cream goes by the start. Sunglasses go by sunny: true when any hour of the session is sunny (C5).
+  // Without it (ratings saved before C5), sunglasses go by the start, as they used to.
+  function sunItems({ temperature, cloudCover, isDay, sunny }) {
     const items = [];
-    if (!isDay || cloudCover === null || cloudCover === undefined) return items;
-    if (temperature !== null && temperature !== undefined && temperature >= SUN_CREAM_TEMP && cloudCover < OVERCAST) {
+    const known = (n) => n !== null && n !== undefined;
+    if (isDay && known(cloudCover) && known(temperature) && temperature >= SUN_CREAM_TEMP && cloudCover < OVERCAST) {
       items.push('Sun cream');
     }
-    if (cloudCover <= SUNGLASSES_CLOUD) items.push('Sunglasses');
+    const glasses = typeof sunny === 'boolean' ? sunny : Boolean(isDay && known(cloudCover) && cloudCover <= SUNGLASSES_CLOUD);
+    if (glasses) items.push('Sunglasses');
     return items;
   }
 
   // dressingTemp: from dressingTemperature (°C)
   // weather: at the start hour { temperature (°C), cloudCover (%), isDay (true/false) },
-  //   and the worst hour of the session { gusts (km/h), rainChance (%) }. A gap in the forecast is null.
+  //   the worst hour of the session { gusts (km/h), rainChance (%) }, and sunny (true if any hour
+  //   of the session is sunny). A gap in the forecast is null.
   // rules: your rules of thumb (see DEFAULT_RULES); the starting ones if left out
   // Returns { items: [{ area, item }] }, grouped as Upper body, Lower body, Accessories
   function recommend({ activity, dressingTemp, weather, rules = DEFAULT_RULES }) {

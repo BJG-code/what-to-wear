@@ -518,6 +518,7 @@
     const params = new URLSearchParams({
       latitude, longitude,
       hourly: window.Weather.HOURLY_FIELDS.join(','),
+      daily: window.Weather.DAILY_FIELDS.join(','),
       wind_speed_unit: 'kmh',
       timezone: 'auto',
       forecast_days: String(FORECAST_DAYS),
@@ -628,13 +629,15 @@
       return li;
     }));
 
-    // Temperature, cloud and daylight at the start; gusts and rain from the worst hour of the session
+    // Temperature, cloud and daylight at the start; gusts and rain from the worst hour of the session;
+    // sunglasses if any hour of the session is sunny
     const weather = {
       temperature: w.start.temperature,
       cloudCover: w.start.cloudCover,
       isDay: w.start.isDay,
       gusts: w.worstGusts,
       rainChance: w.worstRainChance,
+      sunny: w.sunny,
     };
     const { items } = window.Clothing.recommend({
       activity: session.activity, dressingTemp: dressing.total, weather, rules: state.rules,
@@ -1091,7 +1094,7 @@
     const rules = { ...window.Clothing.DEFAULT_RULES, [activity]: r.rules || window.Clothing.DEFAULT_RULES[activity] };
     const weather = {
       temperature: f.start.temperature, cloudCover: f.start.cloudCover, isDay: f.start.isDay,
-      gusts: f.worstGusts, rainChance: f.worstRainChance,
+      gusts: f.worstGusts, rainChance: f.worstRainChance, sunny: f.sunny,
     };
     try {
       const { items } = window.Clothing.recommend({ activity, dressingTemp: r.dressingTemp, weather, rules });
