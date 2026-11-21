@@ -28,7 +28,7 @@ test.describe('picking the hours of the session', () => {
   test('reads every value for the start hour', () => {
     expect(forSession(forecast, '2026-10-28T07:00', 30).start).toEqual({
       time: '07:00', temperature: 8.6, feelsLike: 6.2, windSpeed: 12, gusts: 22,
-      rainChance: 10, cloudCover: 80, isDay: true, humidity: 85,
+      rainChance: 10, cloudCover: 80, isDay: true, humidity: 85, uvIndex: null,
     });
     expect(forSession(forecast, '2026-10-28T06:00', 30).start.isDay).toBe(false);
   });
@@ -245,5 +245,61 @@ test.describe('exact sunrise and sunset (C5)', () => {
     expect(session.sunny).toBe(true);
     expect(session.sunrise).toBeNull();
     expect(notes(session, '07:15').map((n) => n.text)).toEqual(['Dark at 07:15: take lights.']);
+  });
+});
+
+test.describe('real sunshine and UV (C6)', () => {
+  // Sun 22 Nov 2026 in Dubai: sunrise 06:40. Thin high cloud, so Open-Meteo says 60% cloud all morning,
+  // but the sun shines. Each hour's sunshine is for the hour before it, in seconds.
+  const day = {
+    hourly: {
+      time: ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00'].map((t) => `2026-11-22T${t}`),
+      temperature_2m: [22, 23, 24, 26, 27, 28],
+      apparent_temperature: [24, 25, 26, 27, 28, 29],
+      cloud_cover: [60, 60, 60, 60, 60, 60],
+      is_day: [0, 1, 1, 1, 1, 1],
+      sunshine_duration: [0, 1200, 3600, 3600, 3600, 3600],
+      uv_index: [0, 0.4, 1.6, 2.95, 4.5, 6],
+    },
+    daily: { time: ['2026-11-22'], sunrise: ['2026-11-22T06:40'], sunset: ['2026-11-22T17:30'] },
+  };
+
+  test('asks Open-Meteo for sunshine and the UV index', () => {
+    expect(require('../weather.js').HOURLY_FIELDS).toEqual(expect.arrayContaining(['sunshine_duration', 'uv_index']));
+  });
+
+  test('sunny when any hour of the session has 30 minutes of sunshine or more, whatever the cloud cover says', () => {
+    const session = forSession(day, '2026-11-22T07:20', 70);
+    expect(readings(session.start).sky).toBe('Cloudy');
+    expect(session.sunny).toBe(true);
+  });
+
+  test('sunshine counts for the hour before, so only the hours the session covers count', () => {
+    // 06:00 to 06:50: only the 07:00 figure (06:00 to 07:00) counts, 20 minutes: not sunny
+    expect(forSession(day, '2026-11-22T06:00', 50).sunny).toBe(false);
+    // 06:00 to 07:00 exactly: the 08:00 figure (07:00 to 08:00) doesn't count
+    expect(forSession(day, '2026-11-22T06:00', 60).sunny).toBe(false);
+    // 06:00 to 07:01 reaches into 07:00 to 08:00, which is sunny
+    expect(forSession(day, '2026-11-22T06:00', 61).sunny).toBe(true);
+    // 30 minutes exactly is enough, 29:59 isn't
+    const edge = (seconds) => ({ hourly: { ...day.hourly, sunshine_duration: [0, seconds, 0, 0, 0, 0] } });
+    expect(forSession(edge(1800), '2026-11-22T06:00', 30).sunny).toBe(true);
+    expect(forSession(edge(1799), '2026-11-22T06:00', 30).sunny).toBe(false);
+  });
+
+  test('without sunshine in the forecast, uses daylight and cloud cover as before', () => {
+    const { sunshine_duration: gone, ...rest } = day.hourly;
+    expect(forSession({ ...day, hourly: { ...rest } }, '2026-11-22T07:20', 70).sunny).toBe(false);
+    const clear = { ...day, hourly: { ...rest, cloud_cover: [0, 0, 0, 0, 0, 0] } };
+    expect(forSession(clear, '2026-11-22T07:20', 70).sunny).toBe(true);
+  });
+
+  test('the highest UV index during the session, for sun cream', () => {
+    // 07:20 to 08:20 covers the 07:00 and 08:00 hours
+    expect(forSession(day, '2026-11-22T07:20', 60).worstUv).toBe(1.6);
+    expect(forSession(day, '2026-11-22T08:00', 60).worstUv).toBe(2.95);
+    expect(forSession(day, '2026-11-22T09:00', 120).worstUv).toBe(6);
+    const { uv_index: gone, ...rest } = day.hourly;
+    expect(forSession({ ...day, hourly: rest }, '2026-11-22T09:00', 60).worstUv).toBeNull();
   });
 });

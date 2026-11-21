@@ -127,7 +127,7 @@ test.describe('with location allowed', () => {
     const params = requests[0].searchParams;
     expect(params.get('hourly').split(',').sort()).toEqual([
       'apparent_temperature', 'cloud_cover', 'is_day', 'precipitation_probability',
-      'relative_humidity_2m', 'temperature_2m', 'wind_gusts_10m', 'wind_speed_10m',
+      'relative_humidity_2m', 'sunshine_duration', 'temperature_2m', 'uv_index', 'wind_gusts_10m', 'wind_speed_10m',
     ]);
     expect(params.get('daily')).toBe('sunrise,sunset');
     expect(params.get('current')).toBeNull();
@@ -223,6 +223,28 @@ test.describe('with location allowed', () => {
     await expect(page.locator('#reading-light')).toHaveText('Dark');
     await expect(page.locator('#kit-accessories')).toHaveText('Headband + Sunglasses');
     await expect(page.locator('#notes li')).toHaveText(['Dark at 07:15, light from 07:17: take lights.']);
+  });
+
+  test('C6: thin high cloud but real sunshine (Dubai, 22 Nov): sunglasses; sun cream once UV reaches 3', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-28T03:00:00Z'));
+    // Open-Meteo calls the sky 60% cloudy all morning, but the sun shines the whole time from 07:00.
+    // UV is 1 at 07:00, 2 at 08:00, 3 from 09:00.
+    const weather = hourlyForecast(() => ({ temperature_2m: 23, apparent_temperature: 25, cloud_cover: 60 }));
+    const hour = (t) => Number(t.slice(11, 13));
+    weather.hourly.sunshine_duration = weather.hourly.time.map((t) => (hour(t) >= 8 && hour(t) <= 17 ? 3600 : 0));
+    weather.hourly.uv_index = weather.hourly.time.map((t) => (hour(t) >= 9 && hour(t) <= 15 ? 3 : Math.max(0, hour(t) - 6)));
+    weather.daily = { time: ['2026-10-28'], sunrise: ['2026-10-28T06:30'], sunset: ['2026-10-28T17:30'] };
+    await mockServices(page, { weather });
+    await page.goto('/');
+    // 07:20 to 08:20: sunny, UV at most 2
+    await openOutfit(page, { time: '07:20', distance: '2', duration: '60' });
+    await expect(page.locator('#reading-sky')).toHaveText('Cloudy');
+    await expect(page.locator('#kit-accessories')).toHaveText('Sunglasses');
+    // 08:20 to 09:20 reaches UV 3
+    await page.goBack();
+    await page.getByLabel('Start time').fill('08:20');
+    await page.getByRole('button', { name: 'What should I wear?' }).click();
+    await expect(page.locator('#kit-accessories')).toHaveText('Sun cream + Sunglasses');
   });
 
   test('distance making the outfit lighter adds the warm-up note', async ({ page }) => {

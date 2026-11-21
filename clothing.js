@@ -23,7 +23,9 @@
   const GUSTY = 40;
   const GILET_GUSTS_BELOW = 12;
 
-  // Sun cream: actual temperature (°C) at or above this, in daylight, and not overcast
+  // Sun cream: the UV index during the session at or above this ("moderate", when sun protection is advised) (C6)
+  const SUN_CREAM_UV = 3;
+  // Before C6, and when the forecast has no UV: actual temperature (°C) at or above this, in daylight, and not overcast
   const SUN_CREAM_TEMP = 16;
   // Cloud cover (%) at or above which the sky counts as overcast (agreed 31 Oct 2026)
   const OVERCAST = 50;
@@ -148,15 +150,18 @@
     return { upper, lower, accessories };
   }
 
-  // Sun cream and sunglasses, the same for both activities. Uses the actual temperature, not the dressing temp.
-  // Sun cream goes by the start. Sunglasses go by sunny: true when any hour of the session is sunny (C5).
+  // Sun cream and sunglasses, the same for both activities. Never the dressing temp.
+  // Sun cream goes by uv: the highest UV index during the session (C6). Without it (ratings saved
+  // before C6, or no UV in the forecast), by the actual temperature, daylight and cloud at the start.
+  // Sunglasses go by sunny: true when any hour of the session is sunny (C5, C6).
   // Without it (ratings saved before C5), sunglasses go by the start, as they used to.
-  function sunItems({ temperature, cloudCover, isDay, sunny }) {
+  function sunItems({ temperature, cloudCover, isDay, sunny, uv }) {
     const items = [];
     const known = (n) => n !== null && n !== undefined;
-    if (isDay && known(cloudCover) && known(temperature) && temperature >= SUN_CREAM_TEMP && cloudCover < OVERCAST) {
-      items.push('Sun cream');
-    }
+    const cream = known(uv)
+      ? uv >= SUN_CREAM_UV
+      : Boolean(isDay && known(cloudCover) && known(temperature) && temperature >= SUN_CREAM_TEMP && cloudCover < OVERCAST);
+    if (cream) items.push('Sun cream');
     const glasses = typeof sunny === 'boolean' ? sunny : Boolean(isDay && known(cloudCover) && cloudCover <= SUNGLASSES_CLOUD);
     if (glasses) items.push('Sunglasses');
     return items;
@@ -165,7 +170,7 @@
   // dressingTemp: from dressingTemperature (°C)
   // weather: at the start hour { temperature (°C), cloudCover (%), isDay (true/false) },
   //   the worst hour of the session { gusts (km/h), rainChance (%) }, and sunny (true if any hour
-  //   of the session is sunny). A gap in the forecast is null.
+  //   of the session is sunny), and uv (the highest UV index during the session). A gap in the forecast is null.
   // rules: your rules of thumb (see DEFAULT_RULES); the starting ones if left out
   // Returns { items: [{ area, item }] }, grouped as Upper body, Lower body, Accessories
   function recommend({ activity, dressingTemp, weather, rules = DEFAULT_RULES }) {

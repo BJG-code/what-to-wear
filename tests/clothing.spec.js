@@ -230,6 +230,15 @@ test.describe('sun cream and sunglasses, both activities', () => {
       // Sun cream still goes by the start: none in the dark, even with sun later
       expect(sun(activity, { temperature: 25, cloudCover: 0, isDay: false, sunny: true })).not.toContain('Sun cream');
     });
+
+    test(`${activity}: sun cream when the UV index during the session is 3 or more (C6)`, () => {
+      expect(sun(activity, { temperature: 10, cloudCover: 90, uv: 3 })).toContain('Sun cream');
+      expect(sun(activity, { temperature: 30, cloudCover: 0, uv: 2.9 })).not.toContain('Sun cream');
+      expect(sun(activity, { temperature: 30, cloudCover: 0, uv: 0 })).not.toContain('Sun cream');
+      // Without UV (older saves, or a gap in the forecast), the old rule: 16 °C or more, daylight, under 50% cloud
+      expect(sun(activity, { temperature: 16, cloudCover: 49, uv: null })).toContain('Sun cream');
+      expect(sun(activity, { temperature: 16, cloudCover: 50, uv: null })).not.toContain('Sun cream');
+    });
   }
 
   test('sun cream uses the actual temperature, not the dressing temperature', () => {

@@ -53,7 +53,7 @@ Clean and minimal: sentence case, few borders, touch targets at least 44 px, des
 
 ## Weather
 
-One call to Open-Meteo's hourly forecast for the phone's GPS position (free, no key). Fields: `temperature_2m`, `apparent_temperature` (feels like, the main input), `wind_speed_10m`, `wind_gusts_10m` (in km/h), `precipitation_probability`, `cloud_cover`, `is_day`, `relative_humidity_2m`; and daily `sunrise` and `sunset`, so daylight is exact to the minute (`is_day` is the fallback).
+One call to Open-Meteo's hourly forecast for the phone's GPS position (free, no key). Fields: `temperature_2m`, `apparent_temperature` (feels like, the main input), `wind_speed_10m`, `wind_gusts_10m` (in km/h), `precipitation_probability`, `cloud_cover`, `is_day`, `relative_humidity_2m`, `sunshine_duration`, `uv_index`; and daily `sunrise` and `sunset`, so daylight is exact to the minute (`is_day` is the fallback).
 
 - Dressing temperature and readings use the hour nearest the start time.
 - Every hour from start to finish (start + duration) is checked; rain and gust notes and the cycling waterproof use the worst hour.
@@ -101,7 +101,7 @@ Duration does not change the dressing temperature.
 | Buff | Below 8 |
 | Gloves | Below 10 |
 
-**Both activities:** sun cream when the actual temperature is 16 °C or more, in daylight, and not overcast (cloud cover under 50%); sunglasses when any hour of the session is in daylight with cloud cover 30% or less. Both go in the Accessories card.
+**Both activities:** sun cream when the UV index is 3 or more in any hour of the session; sunglasses when any hour of the session has 30 minutes of sunshine or more (C6). Without UV or sunshine in the forecast, the old rules: sun cream at 16 °C or more in daylight with cloud under 50%; sunglasses in daylight with cloud 30% or less. Both go in the Accessories card.
 
 **Worked example:** easy 8 km run, feels like 6 °C, neutral, no learned offset → 6 + 0 + 2 + 0 + 0 = 8 °C → long sleeve, shorts, headband.
 
