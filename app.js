@@ -1021,7 +1021,7 @@
   }
 
   // The weather a rated session was dressed for, in one line, e.g.
-  // "10°C, feels like 8°C · Cloudy · wind 12 km/h, gusts 25 · rain 10%".
+  // "10°C, felt like 8°C · Cloudy · wind 12 km/h, gusts 25 · rain 10%".
   // At the start time, except gusts and rain, which are the worst hour, as the outfit used them.
   // Anything missing from an older save is left out; with nothing at all, there's no line.
   function historyWeather(f) {
@@ -1029,8 +1029,8 @@
     const h = f.start;
     const num = (n) => typeof n === 'number';
     const parts = [];
-    if (num(h.temperature) && num(h.feelsLike)) parts.push(`${wholeDegrees(h.temperature)}°C, feels like ${wholeDegrees(h.feelsLike)}°C`);
-    else if (num(h.feelsLike)) parts.push(`Feels like ${wholeDegrees(h.feelsLike)}°C`);
+    if (num(h.temperature) && num(h.feelsLike)) parts.push(`${wholeDegrees(h.temperature)}°C, felt like ${wholeDegrees(h.feelsLike)}°C`);
+    else if (num(h.feelsLike)) parts.push(`Felt like ${wholeDegrees(h.feelsLike)}°C`);
     if (num(h.cloudCover)) parts.push(window.Weather.readings(h).sky);
     if (num(h.windSpeed)) parts.push(`wind ${Math.round(h.windSpeed)} km/h${num(f.worstGusts) ? `, gusts ${Math.round(f.worstGusts)}` : ''}`);
     if (num(f.worstRainChance)) parts.push(`rain ${Math.round(f.worstRainChance)}%`);
