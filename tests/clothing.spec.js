@@ -221,6 +221,15 @@ test.describe('sun cream and sunglasses, both activities', () => {
       expect(sun(activity, { cloudCover: 31 })).not.toContain('Sunglasses');
       expect(sun(activity, { cloudCover: 0, isDay: false })).not.toContain('Sunglasses');
     });
+
+    test(`${activity}: sunglasses whenever any hour of the session is sunny (C5)`, () => {
+      // Dark and cloudy at the start, but sunny later on
+      expect(sun(activity, { cloudCover: 90, isDay: false, sunny: true })).toContain('Sunglasses');
+      // Sunny at the start doesn't count if the session's hours say otherwise
+      expect(sun(activity, { cloudCover: 0, sunny: false })).not.toContain('Sunglasses');
+      // Sun cream still goes by the start: none in the dark, even with sun later
+      expect(sun(activity, { temperature: 25, cloudCover: 0, isDay: false, sunny: true })).not.toContain('Sun cream');
+    });
   }
 
   test('sun cream uses the actual temperature, not the dressing temperature', () => {

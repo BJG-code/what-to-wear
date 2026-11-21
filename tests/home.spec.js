@@ -129,6 +129,7 @@ test.describe('with location allowed', () => {
       'apparent_temperature', 'cloud_cover', 'is_day', 'precipitation_probability',
       'relative_humidity_2m', 'temperature_2m', 'wind_gusts_10m', 'wind_speed_10m',
     ]);
+    expect(params.get('daily')).toBe('sunrise,sunset');
     expect(params.get('current')).toBeNull();
     expect(params.get('wind_speed_unit')).toBe('kmh');
     expect(params.get('timezone')).toBe('auto');
@@ -210,6 +211,18 @@ test.describe('with location allowed', () => {
     await page.goto('/');
     await openOutfit(page, { time: '12:00' });
     await expect(page.locator('#kit-accessories')).toHaveText('Sun cream + Sunglasses');
+  });
+
+  test('C5: a 07:15 run before a 07:17 sunrise, then bright sun: lights and sunglasses', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-28T06:00:00Z'));
+    const weather = hourlyForecast(() => ({ cloud_cover: 0 }));
+    weather.daily = { time: ['2026-10-28'], sunrise: ['2026-10-28T07:17'], sunset: ['2026-10-28T16:40'] };
+    await mockServices(page, { weather });
+    await page.goto('/');
+    await openOutfit(page, { time: '07:15', distance: '2', duration: '60' });
+    await expect(page.locator('#reading-light')).toHaveText('Dark');
+    await expect(page.locator('#kit-accessories')).toHaveText('Headband + Sunglasses');
+    await expect(page.locator('#notes li')).toHaveText(['Dark at 07:15, light from 07:17: take lights.']);
   });
 
   test('distance making the outfit lighter adds the warm-up note', async ({ page }) => {

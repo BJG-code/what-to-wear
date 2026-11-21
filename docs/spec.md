@@ -21,6 +21,7 @@
 - **Trial (agreed 7 Nov 2026):** after v1.0, the app is trialled by a small group of friends (up to 10, most likely about 5) using the shareable link. Three small changes come first: a way to send your ratings back (T1), installing on Android and a first-visit "add to home screen" hint (T2), and an "About this app" note in Settings saying what happens to your data (T3). See "Trial with a small group" below. No accounts, no app store and still £0.
 - **C3 (agreed 13 Nov 2026):** clearer words about how ratings change later outfits, because people didn't understand it. Only the words change, not how learning works. After Too hot or Too cold, the thank-you says what will happen and why the kit may not change yet, e.g. "Thanks! Next time we'll dress you 0.5° warmer for runs. Small nudges add up: your kit changes once they cross one of your rules of thumb." (no specific rule is named, as rules can be edited). Perfect and reaching the limit keep their own messages in the same plain style. The breakdown says "From your previous feedback: 0.5° warmer" / "0.5° lighter", or "From your previous feedback: no change yet", instead of "Learned −0.5°". Settings adds a short "How learning works" note under what the app has learned. Follow-up agreed later on 13 Nov 2026: the breakdown says "From your previous feedback" instead of "From your ratings", and the "What the app has learned" heading in Settings is shown in white bold, as clear as "How learning works", so it isn't missed. Later on 13 Nov 2026 it became accent purple (#C4A7FF) bold, as a key feature and a halfway marker on the page, then the same size as "Running" below it, with a purple line under it reaching halfway across the page.
 - **C4 (agreed 13 Nov 2026):** a History screen, opened from a "History" link beside the "Plan a session" title, lists every session you've rated, newest first, written like a diary: the day and start time ("Sat 14 Nov · 07:00", with the year if it isn't this year), "You ran 10 km easy" (or "You rode"), the weather it was dressed for ("Weather: 10°C, felt like 8°C · Cloudy · wind 12 km/h, gusts 25 · rain 10%": at the start time, with the worst gusts and rain chance during the session, as the outfit used them; added 21 Nov 2026), "You wore: …" (the outfit worked out again from what was saved with the rating) and "It felt: Perfect". With nothing rated yet it says so. It only reads the saved ratings, so nothing saved changes. Like Your outfit and Settings, a new release never reloads the app while History is open.
+- **C5 (agreed 14 Nov 2026):** daylight and sunglasses use the exact sunrise and sunset. On Sat 14 Nov a run started at 07:15, the sun rose at 07:17 into bright sun, and no sunglasses were suggested, because only the start hour was checked. The forecast now also asks Open-Meteo for each day's `sunrise` and `sunset`, so daylight is known to the minute (a 07:15 start before a 07:17 sunrise is dark). Sunglasses are suggested when any hour of the session is sunny (daylight and cloud cover 30% or less), not just the start. The lights notes give the exact times: "Dark at 07:15, light from 07:17: take lights." and "Dark from 16:10 (sunset): take lights.". Sun cream still goes by the start. Ratings saved before this change still show their outfit as it was. If a forecast comes without sunrise and sunset, the hourly `is_day` is used as before.
 - Where the mockups disagree with this spec (mph, four feedback buttons, no greeting, no duration), this spec wins.
 
 ## Overview
@@ -100,7 +101,7 @@ One free call to Open-Meteo's hourly forecast for the phone's GPS position retur
 | Feels like | `apparent_temperature` | °C | **Main input:** already includes wind and humidity |
 | Gust / wind | `wind_speed_10m`, `wind_gusts_10m` | km/h | Gilet trigger, gusty note |
 | Rain % | `precipitation_probability` | % | Note at 50% or more; cycling waterproof |
-| Sun | `cloud_cover`, `is_day` | Sunny (cloud 30% or less) / cloudy / dark | Shown; dark adds a lights note; sun cream and sunglasses |
+| Sun | `cloud_cover`, `is_day`, daily `sunrise` and `sunset` | Sunny (cloud 30% or less) / cloudy / dark | Shown; dark adds a lights note with the exact sunrise or sunset; sun cream and sunglasses |
 | Humidity | `relative_humidity_2m` | % | Shown |
 
 - The app reads the hour nearest your chosen start time for the dressing temperature and the readings.
@@ -146,7 +147,7 @@ So the app will sometimes deliberately recommend kit that feels chilly at the st
 | Gloves | Below 7 |
 | Rain | No kit change; the rain chance shows in the weather readings |
 | Sun cream | Temperature 16 °C or more, in daylight, and not overcast (cloud cover under 50%) |
-| Sunglasses | Daylight and cloud cover 30% or less |
+| Sunglasses | Any hour of the session in daylight with cloud cover 30% or less |
 
 **Cycling** (dressing temp, °C, after cycling chill)
 
@@ -158,7 +159,7 @@ So the app will sometimes deliberately recommend kit that feels chilly at the st
 | Buff | Below 8 |
 | Gloves | Below 10 |
 | Sun cream | Temperature 16 °C or more, in daylight, and not overcast (cloud cover under 50%) |
-| Sunglasses | Daylight and cloud cover 30% or less |
+| Sunglasses | Any hour of the session in daylight with cloud cover 30% or less |
 
 Sun cream uses the actual temperature, not the dressing temperature. Both sun items go in the Accessories card.
 
@@ -170,7 +171,7 @@ The result screen shows the dressing temperature and how it was worked out, the 
 
 Short notes appear below the cards only when they apply: rain 50% or more ("rain likely"), gusts 40 km/h or more ("gusty"), or dark at the chosen time ("take lights"). When distance or effort has made the outfit lighter, a note says so: "You'll start a little chilly, but you'll warm up as you go."
 
-Weather-change notes use the duration and appear only when something changes during the session, for example "Rain likely from 07:30", "About 4° colder by the end" (feels like changes by 3 °C or more), or "Dark from 17:10: take lights".
+Weather-change notes use the duration and appear only when something changes during the session, for example "Rain likely from 07:30", "About 4° colder by the end" (feels like changes by 3 °C or more), "Dark at 07:15, light from 07:17: take lights" or "Dark from 16:10 (sunset): take lights" (daylight is worked out from the exact sunrise and sunset).
 
 ## Feedback loop
 

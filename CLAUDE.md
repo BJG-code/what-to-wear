@@ -53,7 +53,7 @@ Clean and minimal: sentence case, few borders, touch targets at least 44 px, des
 
 ## Weather
 
-One call to Open-Meteo's hourly forecast for the phone's GPS position (free, no key). Fields: `temperature_2m`, `apparent_temperature` (feels like, the main input), `wind_speed_10m`, `wind_gusts_10m` (in km/h), `precipitation_probability`, `cloud_cover`, `is_day`, `relative_humidity_2m`.
+One call to Open-Meteo's hourly forecast for the phone's GPS position (free, no key). Fields: `temperature_2m`, `apparent_temperature` (feels like, the main input), `wind_speed_10m`, `wind_gusts_10m` (in km/h), `precipitation_probability`, `cloud_cover`, `is_day`, `relative_humidity_2m`; and daily `sunrise` and `sunset`, so daylight is exact to the minute (`is_day` is the fallback).
 
 - Dressing temperature and readings use the hour nearest the start time.
 - Every hour from start to finish (start + duration) is checked; rain and gust notes and the cycling waterproof use the worst hour.
@@ -101,7 +101,7 @@ Duration does not change the dressing temperature.
 | Buff | Below 8 |
 | Gloves | Below 10 |
 
-**Both activities:** sun cream when the actual temperature is 16 °C or more, in daylight, and not overcast (cloud cover under 50%); sunglasses in daylight when cloud cover is 30% or less. Both go in the Accessories card.
+**Both activities:** sun cream when the actual temperature is 16 °C or more, in daylight, and not overcast (cloud cover under 50%); sunglasses when any hour of the session is in daylight with cloud cover 30% or less. Both go in the Accessories card.
 
 **Worked example:** easy 8 km run, feels like 6 °C, neutral, no learned offset → 6 + 0 + 2 + 0 + 0 = 8 °C → long sleeve, shorts, headband.
 
@@ -115,7 +115,7 @@ Shown below the cards only when they apply:
 - Gusts 40 km/h or more: "gusty"
 - Dark at the start time: "take lights"
 - Distance or effort made the outfit lighter: "You'll start a little chilly, but you'll warm up as you go."
-- Weather changes during the session, e.g. "Rain likely from 07:30", "About 4° colder by the end" (feels like changes by 3 °C or more), "Dark from 17:10: take lights"
+- Weather changes during the session, e.g. "Rain likely from 07:30", "About 4° colder by the end" (feels like changes by 3 °C or more), "Dark at 07:15, light from 07:17: take lights", "Dark from 16:10 (sunset): take lights"
 
 ## Feedback rules
 

@@ -1,6 +1,6 @@
 // Checks how the session's weather is picked out of the hourly forecast, without opening the page.
 const { test, expect } = require('@playwright/test');
-const { forSession, readings, notes } = require('../weather.js');
+const { forSession, readings, notes, DAILY_FIELDS } = require('../weather.js');
 
 // A small forecast for one morning, 06:00 to 10:00, in the shape Open-Meteo sends
 const forecast = {
@@ -176,5 +176,74 @@ test.describe('notes about the weather', () => {
 
   test('gaps in the forecast are ignored', () => {
     expect(texts([{ rainChance: null, gusts: null }, { rainChance: null, gusts: null, feelsLike: null }])).toEqual([]);
+  });
+});
+
+test.describe('exact sunrise and sunset (C5)', () => {
+  // Sat 14 Nov 2026: sunrise 07:17, sunset 16:10. Clear all morning; Open-Meteo's hourly daylight
+  // says 07:00 is dark and 08:00 is light. The afternoon clouds over.
+  const day = {
+    hourly: {
+      time: ['06:00', '07:00', '08:00', '09:00', '15:00', '16:00', '17:00', '18:00'].map((t) => `2026-11-14T${t}`),
+      temperature_2m: [5, 5, 6, 7, 9, 8, 7, 6],
+      apparent_temperature: [3, 3, 4, 5, 7, 6, 5, 4],
+      cloud_cover: [0, 0, 0, 0, 90, 90, 90, 90],
+      is_day: [0, 0, 1, 1, 1, 1, 0, 0],
+    },
+    daily: { time: ['2026-11-14'], sunrise: ['2026-11-14T07:17'], sunset: ['2026-11-14T16:10'] },
+  };
+
+  test('asks Open-Meteo for each day\'s sunrise and sunset', () => {
+    expect(DAILY_FIELDS).toEqual(['sunrise', 'sunset']);
+  });
+
+  test('a 07:15 start is dark when the sun rises at 07:17', () => {
+    const session = forSession(day, '2026-11-14T07:15', 60);
+    expect(session.start.isDay).toBe(false);
+    expect(readings(session.start).light).toBe('Dark');
+    expect(session.sunrise).toBe('07:17');
+    expect(notes(session, '07:15').map((n) => n.text)).toEqual(['Dark at 07:15, light from 07:17: take lights.']);
+  });
+
+  test('sunny if any hour of the session is sunny, even if it starts dark (the 14 Nov run)', () => {
+    // 07:15 to 08:15: dark at the start, bright sun once the sun is up
+    expect(forSession(day, '2026-11-14T07:15', 60).sunny).toBe(true);
+    // A short one still counts: it finishes at 07:45, after sunrise
+    expect(forSession(day, '2026-11-14T07:15', 30).sunny).toBe(true);
+    // All before sunrise: clear but not sunny
+    const early = forSession(day, '2026-11-14T06:00', 60);
+    expect(early.sunny).toBe(false);
+    expect(early.sunrise).toBeNull();
+  });
+
+  test('sunrise and sunset on the minute: light from sunrise, dark from sunset', () => {
+    expect(forSession(day, '2026-11-14T07:17', 30).start.isDay).toBe(true);
+    expect(forSession(day, '2026-11-14T07:16', 30).start.isDay).toBe(false);
+    expect(forSession(day, '2026-11-14T16:09', 30).start.isDay).toBe(true);
+    expect(forSession(day, '2026-11-14T16:10', 30).start.isDay).toBe(false);
+  });
+
+  test('getting dark during the session gives the exact sunset', () => {
+    const session = forSession(day, '2026-11-14T15:30', 60);
+    expect(session.start.isDay).toBe(true);
+    expect(session.sunset).toBe('16:10');
+    expect(notes(session, '15:30').map((n) => n.text)).toEqual(['Dark from 16:10 (sunset): take lights.']);
+    // Cloudy all afternoon, so not sunny
+    expect(session.sunny).toBe(false);
+  });
+
+  test('finishing before sunset: no lights', () => {
+    const session = forSession(day, '2026-11-14T15:00', 60);
+    expect(session.sunset).toBeNull();
+    expect(notes(session, '15:00')).toEqual([]);
+  });
+
+  test('without sunrise and sunset, uses Open-Meteo\'s hourly daylight as before', () => {
+    const { daily, ...hourlyOnly } = day;
+    const session = forSession(hourlyOnly, '2026-11-14T07:15', 60);
+    expect(session.start.isDay).toBe(false);
+    expect(session.sunny).toBe(true);
+    expect(session.sunrise).toBeNull();
+    expect(notes(session, '07:15').map((n) => n.text)).toEqual(['Dark at 07:15: take lights.']);
   });
 });
